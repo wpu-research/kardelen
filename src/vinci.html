@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VinciBot Simülasyonu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        labBg: '#f0f9ff',
+                        circuitDark: '#0f172a',
+                        electricYellow: '#facc15',
+                        electricBlue: '#38bdf8',
+                        warmAmber: '#fbbf24',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Quicksand', sans-serif; user-select: none; }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .tab-btn { white-space: nowrap; flex-shrink: 0; }
+        #tabNav { scrollbar-width: none; } #tabNav::-webkit-scrollbar { display: none; }
+        .cb { display: flex; align-items: center; gap: 8px; color: #fff; font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 14px;
+              border-radius: 10px; padding: 7px 10px; box-shadow: inset 0 -3px 0 rgba(0,0,0,.18); min-height: 40px; }
+        .cb .v { background: #fff; color: #1e293b; border-radius: 999px; padding: 0 9px; font-weight: 700; min-width: 28px; text-align: center; }
+        .cb.run { outline: 4px solid #facc15; outline-offset: 1px; }
+        .k-move { background: #2563eb; } .k-look { background: #9333ea; } .k-sound { background: #db2777; } .k-pen { background: #059669; } .k-ctrl { background: #ea580c; } .k-start { background: #f59e0b; }
+        .shake { animation: shake .35s; }
+        @keyframes shake { 25% { transform: translateX(-6px); } 75% { transform: translateX(6px); } }
+        .hot { cursor: pointer; }
+        .hot:hover circle.ring, .hot.on circle.ring { stroke: #ef4444; stroke-width: 4; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col min-h-screen">
+
+    <header class="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-emerald-400 to-sky-500 flex items-center justify-center text-white shadow-md text-xl">🤖</div>
+            <div>
+                <h1 class="font-fredoka text-xl md:text-2xl font-bold bg-gradient-to-r from-emerald-600 via-teal-600 to-sky-600 bg-clip-text text-transparent">VinciBot Laboratuvarı</h1>
+                <p class="text-xs text-slate-500 font-medium">Robotu tanı • Blok kodlama • Görevler</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 md:p-6 flex flex-col gap-5">
+        <div class="flex border-b border-slate-300 gap-2 overflow-x-auto pb-1" id="tabNav">
+            <button onclick="switchTab('robot')" id="tab-robot" class="tab-btn"><i class="fa-solid fa-robot"></i> 1. Robotu Tanı</button>
+            <button onclick="switchTab('code')" id="tab-code" class="tab-btn"><i class="fa-solid fa-flag-checkered"></i> 2. Görevler ve Kodlama</button>
+        </div>
+
+        <!-- 1. ROBOTU TANI -->
+        <section id="sec-robot" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80">
+                <p class="text-sm font-bold text-slate-500 mb-2">Robotun bir parçasına dokun 👇</p>
+                <svg id="robotBig" viewBox="0 0 520 400" class="w-full h-auto"></svg>
+            </div>
+            <div class="lg:col-span-5 flex flex-col gap-4">
+                <div id="partCard" class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80 min-h-[12rem]"></div>
+                <div class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80">
+                    <h3 class="font-fredoka font-bold mb-3">Hemen dene</h3>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="bigFace()" class="px-3 py-2 rounded-xl bg-purple-50 border border-purple-200 text-purple-800 font-fredoka font-bold text-sm active:scale-95">😊 Yüz değiştir</button>
+                        <button onclick="bigLight()" class="px-3 py-2 rounded-xl bg-sky-50 border border-sky-200 text-sky-800 font-fredoka font-bold text-sm active:scale-95">🌈 Işık rengi</button>
+                        <button onclick="playMelody(1)" class="px-3 py-2 rounded-xl bg-pink-50 border border-pink-200 text-pink-800 font-fredoka font-bold text-sm active:scale-95">🎵 Ses çal</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. GÖREVLER VE KODLAMA -->
+        <section id="sec-code" class="hidden flex flex-col gap-4">
+            <div id="missionTabs" class="flex flex-wrap gap-2"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div class="lg:col-span-6 bg-white rounded-3xl p-4 md:p-5 shadow-xl border border-slate-200/80 flex flex-col gap-3">
+                    <div><h2 id="mTitle" class="font-fredoka text-lg font-bold"></h2><p id="mDesc" class="text-sm text-slate-600"></p></div>
+                    <div id="mapWrap" class="rounded-2xl overflow-hidden border-4 border-slate-700 bg-white max-w-[30rem] w-full mx-auto">
+                        <svg id="map" viewBox="0 0 420 420" class="w-full h-auto block"></svg>
+                    </div>
+                    <p id="runMsg" class="text-sm font-bold text-slate-600 min-h-[1.25rem] text-center"></p>
+                    <div id="nextWrap" class="hidden text-center"><button onclick="nextMission()" class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-fredoka font-bold shadow-md active:scale-95">Sonraki görev <i class="fa-solid fa-arrow-right"></i></button></div>
+                </div>
+                <div class="lg:col-span-6 flex flex-col gap-4">
+                    <div class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200/80">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-fredoka font-bold">Kodum</h3>
+                            <div class="flex gap-2">
+                                <button onclick="loadExample()" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-fredoka font-bold text-xs active:scale-95">İpucu kodu</button>
+                                <button onclick="clearProgram()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-fredoka font-bold text-xs active:scale-95"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div id="program" class="min-h-[8rem] max-h-[22rem] overflow-y-auto rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 p-3 flex flex-col gap-1.5"></div>
+                        <p class="text-[11px] text-slate-400 mt-2">Beyaz sayıya dokun: değiştir • ✕: sil • “Tekrarla” ile “Tekrar sonu” arasındaki bloklar tekrarlanır</p>
+                        <div class="flex gap-2 mt-3">
+                            <button onclick="runProgram()" class="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-fredoka font-bold shadow-md active:scale-95"><i class="fa-solid fa-play"></i> Çalıştır</button>
+                            <button onclick="resetRobot(true)" class="flex-1 py-3 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-fredoka font-bold shadow-md active:scale-95"><i class="fa-solid fa-rotate-left"></i> Başa al</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200/80">
+                        <h3 class="font-fredoka font-bold mb-3">Bloklar <span class="text-xs font-semibold text-slate-400">(eklemek için dokun)</span></h3>
+                        <div id="palette" class="grid grid-cols-2 sm:grid-cols-3 gap-2"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <p class="text-center text-xs text-slate-500 font-medium">Kodeksan Robotik Kodlama • VinciBot alıştırma simülasyonu (gerçek MatataCode uygulamasının yerini tutmaz)</p>
+    </footer>
+
+    <script>
+        const START_MODE = '__SIM_MODE__';
+        const $ = id => document.getElementById(id);
+
+        /* ───────── SES ───────── */
+        let actx = null;
+        function tone(freqs, dur = 0.12, type = 'triangle', vol = 0.18) {
+            try {
+                actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+                if (actx.state === 'suspended') actx.resume();
+                freqs.forEach((f, i) => {
+                    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * dur;
+                    o.type = type; o.frequency.setValueAtTime(f, t);
+                    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.01, t + dur);
+                    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+                });
+            } catch (e) {}
+        }
+        const sClick = () => tone([600], 0.05, 'sine', 0.12);
+        const good = () => tone([523, 659, 784, 1046], 0.1);
+        const bad = () => tone([200, 150], 0.14, 'sawtooth', 0.15);
+        const MELODIES = { 1: [523, 587, 659, 523], 2: [784, 659, 523, 392], 3: [392, 392, 587, 587, 659, 659, 587] };
+        function playMelody(n) { tone(MELODIES[n], 0.14); }
+        function safeConfetti() { try { if (typeof confetti === 'function') confetti({ particleCount: 90, spread: 70, origin: { y: 0.6 } }); } catch (e) {} }
+
+        function switchTab(name) {
+            sClick();
+            ['robot', 'code'].forEach(n => {
+                $('sec-' + n).classList.toggle('hidden', n !== name);
+                $('tab-' + n).className = 'tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 transition ' +
+                    (n === name ? 'border-emerald-500 bg-white text-emerald-700 shadow-sm' : 'border-transparent text-slate-600 hover:text-emerald-600 hover:bg-white/50');
+            });
+        }
+
+        /* ───────── YÜZ (LED ekran 5x5) ───────── */
+        const FACES = {
+            mutlu:  ['.....', '.#.#.', '.....', '#...#', '.###.'],
+            saskin: ['.....', '.#.#.', '.....', '.###.', '.#.#.'],
+            uzgun:  ['.....', '.#.#.', '.....', '.###.', '#...#'],
+            sevgi:  ['.#.#.', '#####', '#####', '.###.', '..#..'],
+            yildiz: ['..#..', '#####', '.###.', '.#.#.', '#...#']
+        };
+        const FACE_NAMES = { mutlu: '😊 Mutlu', saskin: '😮 Şaşkın', uzgun: '😢 Üzgün', sevgi: '❤️ Kalp', yildiz: '⭐ Yıldız' };
+        const FACE_KEYS = Object.keys(FACES);
+        const COLORS = [['Kırmızı', '#ef4444'], ['Turuncu', '#f97316'], ['Sarı', '#facc15'], ['Yeşil', '#22c55e'], ['Mavi', '#3b82f6'], ['Mor', '#a855f7'], ['Beyaz', '#ffffff']];
+        function faceSVG(face, x, y, cell, col) {
+            return FACES[face].map((row, r) => [...row].map((ch, c) =>
+                `<rect x="${x + c * cell}" y="${y + r * cell}" width="${cell - 1.5}" height="${cell - 1.5}" rx="${cell / 5}" fill="${ch === '#' ? col : '#1e293b'}"/>`).join('')).join('');
+        }
+
+        /* ═════════ 1. ROBOTU TANI ═════════ */
+        const PARTS = {
+            ekran:   { t: 'LED Ekran (Yüz)', d: 'Robotun yüzü. Küçük ışıklardan oluşur; mutlu, şaşkın, üzgün yüzler ya da şekiller gösterebilir.', e: '😊' },
+            isik:    { t: 'Renkli Işıklar', d: 'Robotun gövdesindeki ışıklar istediğimiz renkte yanar. Kodla rengini seçeriz.', e: '🌈' },
+            teker:   { t: 'Tekerlekler ve Motorlar', d: 'İki tekerleğin her birini ayrı bir motor döndürür. Böylece robot ileri, geri gider ve sağa, sola döner.', e: '🛞' },
+            engel:   { t: 'Engel Sensörü', d: 'Robotun önündeki “gözler”. Önünde bir engel olduğunu fark eder, robot çarpmadan durabilir.', e: '👀' },
+            cizgi:   { t: 'Çizgi Sensörleri', d: 'Robotun altındadır. Yerdeki siyah çizgiyi görür; robot çizgiyi takip edebilir.', e: '➖' },
+            hoparlor:{ t: 'Hoparlör', d: 'Robot ses ve müzik çalar.', e: '🔊' },
+            kalem:   { t: 'Kalem Yuvası', d: 'Ortadaki delikten kalem takılır. Kalem inince robot gittiği yere çizgi çizer!', e: '✏️' },
+            dugme:   { t: 'Açma / Kapama Düğmesi', d: 'Robotu açıp kapatır. İşimiz bitince robotu mutlaka kapatırız, şarjı bitmesin.', e: '⏻' }
+        };
+        const big = { face: 'mutlu', color: 4, sel: 'ekran' };
+        function drawBig() {
+            const col = COLORS[big.color][1];
+            const hot = (k, cx, cy) => `<g class="hot ${big.sel === k ? 'on' : ''}" onclick="selPart('${k}')"><circle class="ring" cx="${cx}" cy="${cy}" r="17" fill="#fff" stroke="#f59e0b" stroke-width="3"/><text x="${cx}" y="${cy + 6}" text-anchor="middle" font-size="16">${PARTS[k].e}</text></g>`;
+            $('robotBig').innerHTML = `
+                <ellipse cx="260" cy="350" rx="180" ry="18" fill="#cbd5e1"/>
+                <rect x="70" y="240" width="60" height="110" rx="22" fill="#334155"/><rect x="390" y="240" width="60" height="110" rx="22" fill="#334155"/>
+                <rect x="85" y="255" width="30" height="80" rx="12" fill="#64748b"/><rect x="405" y="255" width="30" height="80" rx="12" fill="#64748b"/>
+                <rect x="110" y="60" width="300" height="280" rx="60" fill="#f8fafc" stroke="#cbd5e1" stroke-width="4"/>
+                <rect x="110" y="250" width="300" height="20" fill="${col}" opacity=".85"/>
+                <rect x="185" y="95" width="150" height="130" rx="22" fill="#0f172a"/>
+                ${faceSVG(big.face, 210, 112, 20, col)}
+                <circle cx="215" cy="305" r="12" fill="#1f2937"/><circle cx="305" cy="305" r="12" fill="#1f2937"/>
+                <circle cx="260" cy="40" r="16" fill="#e2e8f0" stroke="#94a3b8" stroke-width="3"/><rect x="254" y="10" width="12" height="40" rx="4" fill="#f59e0b"/>
+                ${[0, 1, 2].map(i => `<rect x="${140 + i * 12}" y="190" width="6" height="30" rx="3" fill="#cbd5e1"/>`).join('')}
+                <rect x="360" y="90" width="26" height="14" rx="7" fill="#94a3b8"/>
+                ${hot('ekran', 345, 110)}${hot('isik', 440, 260)}${hot('teker', 70, 230)}${hot('engel', 260, 300)}${hot('cizgi', 190, 380)}${hot('hoparlor', 150, 160)}${hot('kalem', 300, 30)}${hot('dugme', 400, 80)}`;
+            const P = PARTS[big.sel];
+            $('partCard').innerHTML = `<div class="text-5xl">${P.e}</div><h3 class="font-fredoka text-2xl font-bold mt-2">${P.t}</h3><p class="text-base text-slate-600 mt-2 leading-relaxed">${P.d}</p>`;
+        }
+        function selPart(k) { sClick(); big.sel = k; drawBig(); }
+        function bigFace() { sClick(); big.face = FACE_KEYS[(FACE_KEYS.indexOf(big.face) + 1) % FACE_KEYS.length]; big.sel = 'ekran'; drawBig(); }
+        function bigLight() { sClick(); big.color = (big.color + 1) % COLORS.length; big.sel = 'isik'; drawBig(); }
+
+        /* ═════════ 2. GÖREVLER ═════════ */
+        // Harita 6x6; yön: 0 yukarı, 1 sağ, 2 aşağı, 3 sol
+        const MISSIONS = [
+            { id: 'm1', t: '1. İlk Adımlar', d: 'Robotu yıldıza götür.', start: [0, 5, 0], stars: [[0, 2]], rocks: [],
+              hint: [['fwd', 3]] },
+            { id: 'm2', t: '2. Köşeyi Dön', d: 'Yıldız köşenin arkasında. Dönmeyi unutma!', start: [0, 5, 0], stars: [[3, 2]], rocks: [],
+              hint: [['fwd', 3], ['right'], ['fwd', 3]] },
+            { id: 'm3', t: '3. Taştan Kaç', d: 'Yolda taş var. Çarpmadan yıldıza ulaş.', start: [1, 5, 0], stars: [[1, 1]], rocks: [[1, 3]],
+              hint: [['right'], ['fwd', 1], ['left'], ['fwd', 4], ['left'], ['fwd', 1]] },
+            { id: 'm4', t: '4. Tüm Yıldızlar', d: 'Üç yıldızın hepsini topla.', start: [0, 5, 0], stars: [[0, 3], [2, 3], [2, 0]], rocks: [[1, 2], [4, 4]],
+              hint: [['fwd', 2], ['right'], ['fwd', 2], ['left'], ['fwd', 3]] },
+            { id: 'm5', t: '5. Kare Çiz', d: 'Kalemi indir ve noktalı kareyi çiz. İpucu: Tekrarla bloğu!', start: [1, 4, 0], stars: [], rocks: [],
+              shape: [[1, 4], [1, 2], [3, 2], [3, 4], [1, 4]],
+              hint: [['pendown'], ['repeat', 4], ['fwd', 2], ['right'], ['end'], ['penup']] },
+            { id: 'm6', t: '6. Serbest Çizim', d: 'Kalemle istediğin şekli çiz, yüz ve ışıklarla oyna!', start: [2, 3, 0], stars: [], rocks: [], free: true,
+              hint: [['pendown'], ['color', 5], ['repeat', 4], ['fwd', 2], ['right'], ['face', 'sevgi'], ['end'], ['sound', 3]] }
+        ];
+        const BLOCKS = {
+            fwd:     { k: 'k-move', n: 'İleri git', u: 'adım', v: 1, min: 1, max: 5, i: 'fa-arrow-up' },
+            back:    { k: 'k-move', n: 'Geri git', u: 'adım', v: 1, min: 1, max: 5, i: 'fa-arrow-down' },
+            left:    { k: 'k-move', n: 'Sola dön', i: 'fa-rotate-left' },
+            right:   { k: 'k-move', n: 'Sağa dön', i: 'fa-rotate-right' },
+            pendown: { k: 'k-pen', n: 'Kalemi indir', i: 'fa-pen' },
+            penup:   { k: 'k-pen', n: 'Kalemi kaldır', i: 'fa-pen-clip' },
+            color:   { k: 'k-look', n: 'Işık rengi', i: 'fa-lightbulb', v: 4 },
+            face:    { k: 'k-look', n: 'Yüz', i: 'fa-face-smile', v: 'mutlu' },
+            sound:   { k: 'k-sound', n: 'Müzik çal', i: 'fa-music', v: 1, min: 1, max: 3 },
+            wait:    { k: 'k-ctrl', n: 'Bekle', u: 'sn', v: 1, min: 1, max: 5, i: 'fa-hourglass-half' },
+            repeat:  { k: 'k-ctrl', n: 'Tekrarla', u: 'kez', v: 4, min: 2, max: 8, i: 'fa-repeat' },
+            end:     { k: 'k-ctrl', n: 'Tekrar sonu', i: 'fa-turn-up fa-flip-horizontal' }
+        };
+        const C = 70, DX = [0, 1, 0, -1], DY = [-1, 0, 1, 0];
+        const st = { mi: 0, prog: [], token: 0, pc: -1, running: false,
+                     x: 0, y: 0, dir: 0, px: 0, py: 0, ang: 0, pen: false, color: 4, face: 'mutlu', lines: [], got: new Set(), crashed: false };
+
+        function valLabel(p) {
+            const b = BLOCKS[p.k];
+            if (p.k === 'color') return COLORS[p.v][0];
+            if (p.k === 'face') return FACE_NAMES[p.v];
+            return p.v + (b.u ? ' ' + b.u : '');
+        }
+        function renderPalette() {
+            $('palette').innerHTML = Object.entries(BLOCKS).map(([k, b]) =>
+                `<button onclick="addBlock('${k}')" class="cb ${b.k} active:scale-95 transition text-left"><i class="fa-solid ${b.i}"></i><span>${b.n}</span></button>`).join('');
+        }
+        function renderProgram() {
+            let depth = 0;
+            const rows = st.prog.map((p, i) => {
+                if (p.k === 'end') depth = Math.max(0, depth - 1);
+                const b = BLOCKS[p.k], pad = depth * 22;
+                if (p.k === 'repeat') depth++;
+                const sw = p.k === 'color' ? `<span class="w-4 h-4 rounded-full border border-white/70" style="background:${COLORS[p.v][1]}"></span>` : '';
+                return `<div class="flex items-center gap-1.5" style="padding-left:${pad}px">
+                    <div class="cb ${b.k} ${st.pc === i ? 'run' : ''} flex-1"><i class="fa-solid ${b.i}"></i><span>${b.n}</span>${sw}
+                        ${b.v !== undefined ? `<button onclick="bump(${i})" class="v ml-auto">${valLabel(p)}</button>` : ''}</div>
+                    <button onclick="delBlock(${i})" class="w-7 h-7 rounded-full bg-slate-200 text-slate-500 text-xs shrink-0" aria-label="Sil">✕</button></div>`;
+            }).join('');
+            $('program').innerHTML = `<div class="cb k-start"><i class="fa-solid fa-flag"></i> Başlayınca</div>` + (rows || '<p class="text-xs text-slate-400 p-2">Aşağıdan blok ekle…</p>');
+        }
+        function addBlock(k) { sClick(); st.prog.push({ k, v: BLOCKS[k].v }); renderProgram(); const p = $('program'); p.scrollTop = p.scrollHeight; }
+        function delBlock(i) { sClick(); st.prog.splice(i, 1); renderProgram(); }
+        function bump(i) {
+            const p = st.prog[i], b = BLOCKS[p.k]; sClick();
+            if (p.k === 'color') p.v = (p.v + 1) % COLORS.length;
+            else if (p.k === 'face') p.v = FACE_KEYS[(FACE_KEYS.indexOf(p.v) + 1) % FACE_KEYS.length];
+            else p.v = p.v >= b.max ? b.min : p.v + 1;
+            renderProgram();
+        }
+        function clearProgram() { st.token++; st.prog = []; resetRobot(); renderProgram(); }
+        function loadExample() { sClick(); st.token++; st.prog = MISSIONS[st.mi].hint.map(([k, v]) => ({ k, v: v !== undefined ? v : BLOCKS[k].v })); resetRobot(); renderProgram(); }
+
+        function selectMission(i) {
+            st.token++; st.mi = i; st.prog = [];
+            const M = MISSIONS[i];
+            $('mTitle').textContent = M.t; $('mDesc').textContent = M.d;
+            $('missionTabs').innerHTML = MISSIONS.map((m, j) => `<button onclick="sClick();selectMission(${j})" class="px-3.5 py-2 rounded-xl font-fredoka font-bold text-sm shadow-sm active:scale-95 transition border ${j === i ? 'bg-emerald-500 text-white border-emerald-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-emerald-50'}">${m.t}</button>`).join('');
+            resetRobot(); renderProgram();
+        }
+        function nextMission() { selectMission((st.mi + 1) % MISSIONS.length); }
+        function resetRobot(snd) {
+            if (snd) sClick();
+            st.token++;
+            const [x, y, d] = MISSIONS[st.mi].start;
+            Object.assign(st, { x, y, dir: d, px: x, py: y, ang: d * 90, pen: false, color: 4, face: 'mutlu', lines: [], got: new Set(), crashed: false, pc: -1, running: false });
+            $('nextWrap').classList.add('hidden');
+            $('runMsg').textContent = 'Blokları ekle ve ▶ Çalıştır’a bas.';
+            renderProgram(); drawMap();
+        }
+
+        function drawMap() {
+            const M = MISSIONS[st.mi], col = COLORS[st.color][1];
+            let s = `<rect width="420" height="420" fill="#fefce8"/>`;
+            for (let i = 0; i <= 6; i++) s += `<line x1="${i * C}" y1="0" x2="${i * C}" y2="420" stroke="#e5e7eb" stroke-width="2"/><line x1="0" y1="${i * C}" x2="420" y2="${i * C}" stroke="#e5e7eb" stroke-width="2"/>`;
+            if (M.shape) s += `<polyline points="${M.shape.map(([a, b]) => `${a * C + 35},${b * C + 35}`).join(' ')}" fill="none" stroke="#94a3b8" stroke-width="6" stroke-dasharray="10 10"/>`;
+            s += st.lines.map(l => `<line x1="${l[0] * C + 35}" y1="${l[1] * C + 35}" x2="${l[2] * C + 35}" y2="${l[3] * C + 35}" stroke="${l[4]}" stroke-width="7" stroke-linecap="round"/>`).join('');
+            M.rocks.forEach(([a, b]) => s += `<g transform="translate(${a * C + 35} ${b * C + 38})"><ellipse rx="26" ry="20" fill="#78716c"/><ellipse rx="14" ry="8" cy="-6" fill="#a8a29e"/></g>`);
+            M.stars.forEach(([a, b], k) => { if (!st.got.has(k)) s += `<text x="${a * C + 35}" y="${b * C + 47}" text-anchor="middle" font-size="36">⭐</text>`; });
+            // Robot (üstten görünüş)
+            const rx = st.px * C + 35, ry = st.py * C + 35;
+            s += `<g transform="translate(${rx} ${ry}) rotate(${st.ang})">
+                <rect x="-30" y="-14" width="10" height="30" rx="4" fill="#334155"/><rect x="20" y="-14" width="10" height="30" rx="4" fill="#334155"/>
+                <rect x="-22" y="-26" width="44" height="50" rx="14" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+                <rect x="-22" y="14" width="44" height="6" fill="${col}"/>
+                <rect x="-14" y="-20" width="28" height="28" rx="5" fill="#0f172a"/>
+                ${faceSVG(st.face, -12, -18, 4.8, col)}
+                <polygon points="0,-34 -6,-27 6,-27" fill="#f59e0b"/>
+                ${st.pen ? '<circle r="4" cy="12" fill="#f59e0b" stroke="#fff"/>' : ''}
+            </g>`;
+            $('map').innerHTML = s;
+        }
+
+        const sleep = (ms, tok) => new Promise(r => setTimeout(r, tok === st.token ? ms : 0));
+        function animateTo(nx, ny, nang, tok, ms = 380) {
+            return new Promise(res => {
+                const sx = st.px, sy = st.py, sa = st.ang, t0 = performance.now();
+                (function f(now) {
+                    if (tok !== st.token) return res();
+                    const k = Math.min(1, (now - t0) / ms), e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+                    st.px = sx + (nx - sx) * e; st.py = sy + (ny - sy) * e; st.ang = sa + (nang - sa) * e;
+                    drawMap(); k < 1 ? requestAnimationFrame(f) : res();
+                })(t0);
+            });
+        }
+        // Tekrarla/Tekrar sonu bloklarını açarak düz adım listesi üretir (iç içe tekrar desteklenir)
+        function expand(prog) {
+            const out = [];
+            function walk(i, stopAtEnd) {
+                while (i < prog.length) {
+                    const p = prog[i];
+                    if (p.k === 'end') { if (stopAtEnd) return i; i++; continue; }
+                    if (p.k === 'repeat') {
+                        let endIdx = i + 1;
+                        for (let n = 0; n < p.v; n++) { out.push({ idx: i, p }); endIdx = walk(i + 1, true); }
+                        i = endIdx + 1; continue;
+                    }
+                    out.push({ idx: i, p }); i++;
+                }
+                return i;
+            }
+            walk(0, false);
+            return out.slice(0, 400);
+        }
+        async function step(dist, tok) {
+            const M = MISSIONS[st.mi], s = Math.sign(dist);
+            for (let n = 0; n < Math.abs(dist); n++) {
+                const nx = st.x + DX[st.dir] * s, ny = st.y + DY[st.dir] * s;
+                const wall = nx < 0 || ny < 0 || nx > 5 || ny > 5, rock = M.rocks.some(([a, b]) => a === nx && b === ny);
+                if (wall || rock) {
+                    st.crashed = true; st.face = 'uzgun'; bad(); drawMap();
+                    const w = $('mapWrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake');
+                    $('runMsg').textContent = wall ? '💥 Robot haritanın kenarına çarptı!' : '💥 Robot taşa çarptı! Başka bir yol dene.';
+                    return false;
+                }
+                const ox = st.x, oy = st.y;
+                await animateTo(nx, ny, st.ang, tok);
+                if (tok !== st.token) return false;
+                st.x = nx; st.y = ny;
+                if (st.pen) st.lines.push([ox, oy, nx, ny, COLORS[st.color][1]]);
+                M.stars.forEach(([a, b], k) => { if (a === nx && b === ny && !st.got.has(k)) { st.got.add(k); tone([880, 1175], 0.08); } });
+                drawMap();
+            }
+            return true;
+        }
+        function shapeDone(M) {
+            if (!M.shape) return true;
+            const key = (a, b, c, d) => (a < c || (a === c && b < d)) ? `${a},${b}-${c},${d}` : `${c},${d}-${a},${b}`;
+            const drawn = new Set(st.lines.map(l => key(l[0], l[1], l[2], l[3])));
+            for (let i = 0; i < M.shape.length - 1; i++) {
+                const [a, b] = M.shape[i], [c, d] = M.shape[i + 1];
+                const sx = Math.sign(c - a), sy = Math.sign(d - b);
+                for (let x = a, y = b; x !== c || y !== d; x += sx, y += sy) if (!drawn.has(key(x, y, x + sx, y + sy))) return false;
+            }
+            return true;
+        }
+        async function runProgram() {
+            resetRobot();
+            if (!st.prog.length) { bad(); $('runMsg').textContent = 'Önce blok ekle!'; return; }
+            const tok = st.token; st.running = true;
+            $('runMsg').textContent = '▶ Robot çalışıyor…';
+            for (const { idx, p } of expand(st.prog)) {
+                if (tok !== st.token) return;
+                st.pc = idx; renderProgram();
+                let ok = true;
+                switch (p.k) {
+                    case 'fwd': ok = await step(p.v, tok); break;
+                    case 'back': ok = await step(-p.v, tok); break;
+                    case 'left': st.dir = (st.dir + 3) % 4; await animateTo(st.x, st.y, st.ang - 90, tok, 300); break;
+                    case 'right': st.dir = (st.dir + 1) % 4; await animateTo(st.x, st.y, st.ang + 90, tok, 300); break;
+                    case 'pendown': st.pen = true; drawMap(); break;
+                    case 'penup': st.pen = false; drawMap(); break;
+                    case 'color': st.color = p.v; drawMap(); break;
+                    case 'face': st.face = p.v; drawMap(); break;
+                    case 'sound': playMelody(p.v); await sleep(MELODIES[p.v].length * 140, tok); break;
+                    case 'wait': await sleep(p.v * 1000, tok); break;
+                }
+                if (!ok) { st.pc = -1; st.running = false; renderProgram(); return; }
+                await sleep(80, tok);
+            }
+            if (tok !== st.token) return;
+            st.pc = -1; st.running = false; renderProgram();
+            const M = MISSIONS[st.mi];
+            const win = !M.free && st.got.size === M.stars.length && shapeDone(M) && (M.stars.length || M.shape);
+            if (M.free) { $('runMsg').textContent = '🎨 Harika bir çizim!'; good(); }
+            else if (win) { st.face = 'yildiz'; drawMap(); $('runMsg').textContent = '🎉 Görev tamam! Süpersin!'; good(); safeConfetti(); $('nextWrap').classList.remove('hidden'); }
+            else { $('runMsg').textContent = M.shape ? '🤔 Kare henüz tamam değil. Noktalı çizginin hepsinden geçtin mi, kalem inik miydi?' : `🤔 ${M.stars.length - st.got.size} yıldız kaldı. Kodunu kontrol et.`; bad(); }
+        }
+
+        /* ───────── BAŞLANGIÇ ───────── */
+        window.onload = () => {
+            drawBig(); renderPalette();
+            const mode = START_MODE.startsWith('__') ? '' : START_MODE;
+            const mi = MISSIONS.findIndex(m => m.id === mode);
+            selectMission(mi >= 0 ? mi : 0);
+            switchTab(mode === 'robot' || !mode ? 'robot' : 'code');
+        };
+    </script>
+</body>
+</html>

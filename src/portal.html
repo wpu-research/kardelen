@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full nojs">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#f59e0b">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Kardelen Lab">
+    <title>Kardelen'in Bilim Laboratuvarı: Öğretmen Portalı</title>
+    <!-- JS çalışıyorsa "önizleme" uyarısını gizle (iOS Dosyalar/WhatsApp ve Android HTML Viewer JS çalıştırmaz) -->
+    <script>document.documentElement.classList.remove('nojs');</script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        labBg: '#f0f9ff',
+                        circuitDark: '#0f172a',
+                        electricYellow: '#facc15',
+                        electricBlue: '#38bdf8',
+                        warmAmber: '#fbbf24',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Quicksand', sans-serif; }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .shake { animation: shake 0.2s ease-in-out 3; }
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-3px, 2px) rotate(-1deg); }
+            75% { transform: translate(3px, -2px) rotate(1deg); }
+        }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* ───────── iOS / Android ───────── */
+        html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+        .min-h-screen { min-height: 100vh; min-height: 100dvh; }
+        #noJsHelp { display: none; }
+        .nojs #noJsHelp { display: block; }
+        .nojs #lockCard { display: none; }
+        /* çentik / home bar */
+        body { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+        #lockScreen { padding-top: max(1rem, env(safe-area-inset-top)); padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+        #appHeader { padding-top: env(safe-area-inset-top); height: calc(4rem + env(safe-area-inset-top)); }
+        #sidebar { padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); }
+        footer { padding-bottom: calc(1rem + env(safe-area-inset-bottom)); }
+        /* iOS 16px altı yazı alanına dokununca sayfayı yakınlaştırır */
+        @media (max-width: 1023px) { input, select, textarea { font-size: 16px !important; } }
+    </style>
+</head>
+<body id="appBody" class="h-full bg-slate-100 text-slate-800 flex flex-col min-h-screen">
+
+    <!-- ŞİFRE EKRANI -->
+    <div id="lockScreen" class="fixed inset-0 z-50 bg-gradient-to-br from-amber-50 via-pink-50 to-sky-100 flex items-center justify-center p-4 overflow-y-auto">
+        <div id="noJsHelp" class="w-full max-w-sm bg-white rounded-3xl p-6 shadow-xl border border-slate-200/80 text-left">
+            <div class="text-4xl text-center">📱</div>
+            <h1 class="font-fredoka text-xl font-bold text-slate-800 text-center mt-2">Sayfa önizlemede açıldı</h1>
+            <p class="text-sm text-slate-600 mt-2">Dosya şu an telefonun <b>önizleme</b> ekranında görünüyor. Önizleme uygulamayı çalıştırmaz; laboratuvarı tarayıcıda açman gerekiyor.</p>
+            <p class="font-fredoka font-bold text-sm text-slate-800 mt-4">🤖 Android</p>
+            <p class="text-sm text-slate-600">Dosyalar uygulamasında dosyaya uzun bas → <b>Birlikte aç</b> → <b>Chrome</b>. WhatsApp'tan geldiyse önce “İndirilenler”e kaydet, sonra böyle aç.</p>
+            <p class="font-fredoka font-bold text-sm text-slate-800 mt-4">🍎 iPhone / iPad</p>
+            <p class="text-sm text-slate-600">iOS, telefondaki HTML dosyalarını Safari'de çalıştırmaz. Sayfayı sana gönderilen <b>internet linkinden</b> Safari ile aç; sonra Paylaş → <b>Ana Ekrana Ekle</b> ile uygulama gibi kullanabilirsin.</p>
+        </div>
+        <form id="lockCard" onsubmit="tryUnlock(event)" class="w-full max-w-sm bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200/80 text-center">
+            <div class="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-white shadow-md text-3xl">🦋</div>
+            <h1 class="font-fredoka text-2xl font-bold mt-3 bg-gradient-to-r from-amber-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">Kardelen'in Bilim Laboratuvarı</h1>
+            <p class="text-xs text-slate-500 font-medium mt-1">Öğretmen Portalı</p>
+            <label for="pwInput" class="block text-left font-fredoka font-bold text-sm text-slate-700 mt-6 mb-1.5"><i class="fa-solid fa-lock text-amber-500"></i> Öğretmen Şifresi</label>
+            <input id="pwInput" type="password" autocomplete="current-password" placeholder="Şifreni yaz"
+                   class="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold focus:outline-none focus:border-amber-400">
+            <p id="lockError" class="hidden text-sm font-bold text-red-600 mt-2">Şifre yanlış, tekrar dene.</p>
+            <button type="submit" class="mt-4 w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold text-base shadow-md active:scale-95 transition">
+                Giriş Yap <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </form>
+    </div>
+
+    <!-- UYGULAMA -->
+    <div id="app" class="hidden flex-1 flex flex-col">
+
+        <!-- TOP HEADER -->
+        <header id="appHeader" class="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30 shadow-sm h-16">
+            <div class="h-full px-3 md:px-4 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <button onclick="toggleSidebar()" aria-label="Menüyü aç/kapat" class="w-11 h-11 shrink-0 rounded-xl bg-slate-800 text-white hover:bg-slate-700 active:scale-95 transition shadow-md">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <div class="w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-white shadow-md text-xl font-bold">🦋</div>
+                    <div class="min-w-0">
+                        <h1 class="font-fredoka text-lg md:text-2xl font-bold bg-gradient-to-r from-amber-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent truncate">Kardelen'in Bilim Laboratuvarı</h1>
+                        <p class="text-xs text-slate-500 font-medium hidden sm:block">Öğretmen Portalı • Kodeksan Robotik Kodlama</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span id="headerClass" class="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 font-fredoka font-bold text-sm"></span>
+                    <button onclick="lockPortal()" class="flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl bg-slate-800 text-white hover:bg-slate-700 active:scale-95 transition font-fredoka text-sm shadow-md">
+                        <i class="fa-solid fa-lock text-amber-300"></i><span class="hidden sm:inline">Kilitle</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex flex-1 relative">
+            <div id="backdrop" onclick="setSidebar(false)" class="hidden fixed inset-0 bg-slate-900/40 z-40 lg:hidden"></div>
+
+            <!-- SOL MENÜ -->
+            <aside id="sidebar" class="fixed z-50 top-0 left-0 h-full w-72 max-w-[85vw] bg-white border-r border-slate-200 shadow-2xl transition-transform duration-300 -translate-x-full lg:z-20 lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:shadow-none lg:translate-x-0 lg:shrink-0 lg:hidden"></aside>
+
+            <!-- ORTA ALAN -->
+            <main id="view" class="flex-1 min-w-0 p-3 md:p-6"></main>
+        </div>
+
+        <!-- FOOTER -->
+        <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 font-medium">
+                <p>Kodeksan Robotik Kodlama • Elektrik Devresi • WeDo 2.0 • VinciBot • Kardelen'in Bilim Laboratuvarı 🦋⚡</p>
+            </div>
+        </footer>
+    </div>
+
+    <input type="file" id="importFile" accept="application/json,.json" class="hidden" onchange="importData(this)">
+
+    <script>
+/*__DERSLER__*/
+    </script>
+    <script>
+/*__SIM__*/
+    </script>
+
+    <script>
+        /* ───────── RENKLER (Tailwind sınıfları tam yazılı olmalı) ───────── */
+        const COLORS = {
+            amber:   { card: 'from-amber-100 to-amber-50 border-amber-300 hover:border-amber-500',     badge: 'bg-amber-400',   text: 'text-amber-900',   head: 'text-amber-600',   bar: 'bg-amber-400',   btn: 'bg-amber-500 hover:bg-amber-600',     soft: 'bg-amber-50 border-amber-200 text-amber-900',   dot: 'bg-amber-400' },
+            sky:     { card: 'from-sky-100 to-sky-50 border-sky-300 hover:border-sky-500',             badge: 'bg-sky-500',     text: 'text-sky-900',     head: 'text-sky-600',     bar: 'bg-sky-500',     btn: 'bg-sky-500 hover:bg-sky-600',         soft: 'bg-sky-50 border-sky-200 text-sky-900',         dot: 'bg-sky-500' },
+            emerald: { card: 'from-emerald-100 to-emerald-50 border-emerald-300 hover:border-emerald-500', badge: 'bg-emerald-500', text: 'text-emerald-900', head: 'text-emerald-600', bar: 'bg-emerald-500', btn: 'bg-emerald-500 hover:bg-emerald-600', soft: 'bg-emerald-50 border-emerald-200 text-emerald-900', dot: 'bg-emerald-500' },
+            pink:    { card: 'from-pink-100 to-pink-50 border-pink-300 hover:border-pink-500',         badge: 'bg-pink-500',    text: 'text-pink-900',    head: 'text-pink-600',    bar: 'bg-pink-500',    btn: 'bg-pink-500 hover:bg-pink-600',       soft: 'bg-pink-50 border-pink-200 text-pink-900',       dot: 'bg-pink-500' },
+            indigo:  { card: 'from-indigo-100 to-indigo-50 border-indigo-300 hover:border-indigo-500', badge: 'bg-indigo-500',  text: 'text-indigo-900',  head: 'text-indigo-600',  bar: 'bg-indigo-500',  btn: 'bg-indigo-500 hover:bg-indigo-600',   soft: 'bg-indigo-50 border-indigo-200 text-indigo-900', dot: 'bg-indigo-500' }
+        };
+
+        /* ───────── YARDIMCILAR ───────── */
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3);
+        const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+        const fmtDate = iso => { try { return new Date(iso + 'T12:00:00').toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', year: 'numeric', weekday: 'long' }); } catch (e) { return iso; } };
+        const topicOf = id => TOPICS.find(t => t.id === id);
+        const lessonOf = id => LESSONS.find(l => l.id === id);
+        const hash = s => { let h = 5381; for (const c of 'kdl|' + s) h = ((h << 5) + h + c.charCodeAt(0)) | 0; return String(h); };
+        const DEFAULT_PWS = ['ask', 'aşk'];
+
+        function toast(msg) {
+            const t = document.createElement('div');
+            t.className = 'fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] px-4 py-3 rounded-xl bg-slate-800 text-white font-fredoka font-bold text-sm shadow-xl max-w-[90vw] text-center';
+            t.textContent = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2400);
+        }
+
+        let audioCtx = null;
+        function playSound(type) {
+            try {
+                audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator(), gain = audioCtx.createGain(), n = audioCtx.currentTime;
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                if (type === 'click') {
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(400, n); osc.frequency.exponentialRampToValueAtTime(800, n + 0.05);
+                    gain.gain.setValueAtTime(0.15, n); gain.gain.exponentialRampToValueAtTime(0.01, n + 0.05); osc.start(); osc.stop(n + 0.05);
+                } else if (type === 'glow') {
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(220, n); osc.frequency.exponentialRampToValueAtTime(523.25, n + 0.2);
+                    gain.gain.setValueAtTime(0.2, n); gain.gain.exponentialRampToValueAtTime(0.01, n + 0.3); osc.start(); osc.stop(n + 0.3);
+                } else if (type === 'warn') {
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, n); osc.frequency.setValueAtTime(100, n + 0.1);
+                    gain.gain.setValueAtTime(0.25, n); gain.gain.exponentialRampToValueAtTime(0.01, n + 0.25); osc.start(); osc.stop(n + 0.25);
+                }
+            } catch (e) { /* ses desteklenmiyor */ }
+        }
+        function safeConfetti(opts) { try { if (typeof confetti === 'function') confetti(opts); } catch (e) {} }
+
+        /* ───────── VERİ (bu cihazın tarayıcısında saklanır) ───────── */
+        const KEY = 'kardelen_portal_v1';
+        let db;
+        function loadDB() {
+            let saved = null;
+            try { saved = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+            db = Object.assign({ pwHash: null, classes: [], activeClass: null, attendance: {}, notes: [], done: {} }, saved || {});
+            if (!db.classes.find(c => c.id === db.activeClass)) db.activeClass = db.classes[0] ? db.classes[0].id : null;
+        }
+        function saveDB() {
+            try { localStorage.setItem(KEY, JSON.stringify(db)); }
+            catch (e) { toast('⚠️ Kayıt yapılamadı. Tarayıcı depolaması kapalı olabilir.'); }
+        }
+        const activeClass = () => db.classes.find(c => c.id === db.activeClass) || null;
+
+        /* ───────── DURUM ───────── */
+        const state = { view: 'home', simApp: 'elek', simMode: '', sidebar: false, attDate: todayISO(), lesson: null, noteEdit: null, noteDraft: null };
+
+        /* ───────── ŞİFRE ───────── */
+        function tryUnlock(e) {
+            e.preventDefault();
+            const v = $('pwInput').value;
+            const ok = db.pwHash ? hash(v) === db.pwHash : DEFAULT_PWS.includes(v.trim().toLowerCase());
+            if (ok) {
+                try { sessionStorage.setItem('kp_ok', '1'); } catch (err) {}
+                enterApp();
+            } else {
+                $('lockError').classList.remove('hidden');
+                const card = $('lockCard'); card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake');
+                playSound('warn');
+                $('pwInput').select();
+            }
+        }
+        function enterApp() {
+            $('lockScreen').classList.add('hidden');
+            $('app').classList.remove('hidden');
+            $('pwInput').value = '';
+            $('lockError').classList.add('hidden');
+            state.view = 'home'; state.lesson = null;
+            setSidebar(window.innerWidth >= 1024);
+            render();
+        }
+        function lockPortal() {
+            try { sessionStorage.removeItem('kp_ok'); } catch (e) {}
+            $('app').classList.add('hidden');
+            $('lockScreen').classList.remove('hidden');
+            setSidebar(false);
+            setTimeout(() => $('pwInput').focus(), 50);
+        }
+
+        /* ───────── SOL MENÜ ───────── */
+        function setSidebar(open) {
+            state.sidebar = open;
+            const sb = $('sidebar');
+            sb.classList.toggle('-translate-x-full', !open);
+            sb.classList.toggle('lg:hidden', !open);
+            $('backdrop').classList.toggle('hidden', !open);
+        }
+        function toggleSidebar() { playSound('click'); setSidebar(!state.sidebar); }
+
+        function navItem(view, icon, label) {
+            const on = state.view === view;
+            return `<button onclick="go('${view}')" class="w-full flex items-center gap-3 px-3.5 py-3 rounded-xl font-fredoka font-bold text-sm text-left transition active:scale-95 ${on ? 'bg-amber-50 text-amber-700 border-2 border-amber-400 shadow-sm' : 'text-slate-600 border-2 border-transparent hover:bg-slate-50'}">
+                <i class="fa-solid ${icon} w-5 text-center ${on ? 'text-amber-500' : 'text-slate-400'}"></i> ${label}</button>`;
+        }
+
+        function renderSidebar() {
+            const opts = db.classes.map(c => `<option value="${c.id}" ${c.id === db.activeClass ? 'selected' : ''}>${esc(c.name)} (${c.students.length} öğrenci)</option>`).join('');
+            const lessonList = TOPICS.map(t => {
+                const C = COLORS[t.color];
+                return `<div class="mt-2"><p class="text-[11px] font-bold uppercase tracking-wide text-slate-400 px-2 mb-1">${t.emoji} ${esc(t.title)}</p>` +
+                    LESSONS.filter(l => l.topic === t.id).map(l => {
+                        const on = state.view === 'lesson' && state.lesson && state.lesson.id === l.id;
+                        return `<button onclick="openLesson('${l.id}')" class="w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left text-xs font-bold transition active:scale-95 ${on ? 'bg-slate-100 text-slate-900' : 'text-slate-600 hover:bg-slate-50'}">
+                            <span class="w-6 h-6 shrink-0 rounded-md ${C.badge} text-white flex items-center justify-center font-fredoka">${l.no}</span><span class="truncate">${esc(l.title)}</span></button>`;
+                    }).join('') + '</div>';
+            }).join('');
+            $('sidebar').innerHTML = `
+                <div class="h-full overflow-y-auto p-4 flex flex-col gap-4">
+                    <div class="flex items-center justify-between lg:hidden">
+                        <span class="font-fredoka font-bold text-slate-700">Menü</span>
+                        <button onclick="setSidebar(false)" class="w-9 h-9 rounded-lg bg-slate-100 text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                    <div class="bg-slate-50 rounded-2xl border border-slate-200/80 p-3">
+                        <label for="classSel" class="font-fredoka font-bold text-xs text-slate-500 block mb-1.5">Aktif Sınıf</label>
+                        ${db.classes.length
+                            ? `<select id="classSel" onchange="setClass(this.value)" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-white font-fredoka font-bold text-sm focus:outline-none focus:border-amber-400">${opts}</select>`
+                            : `<button onclick="go('classes')" class="w-full px-3 py-2 rounded-xl bg-amber-500 text-white font-fredoka font-bold text-sm">+ İlk sınıfı ekle</button>`}
+                    </div>
+                    <nav class="flex flex-col gap-1.5">
+                        ${navItem('home', 'fa-house', 'Dersler')}
+                        ${navItem('sim', 'fa-flask', 'Simülasyon Laboratuvarı')}
+                        ${navItem('attendance', 'fa-clipboard-check', 'Yoklama')}
+                        ${navItem('notes', 'fa-pen-to-square', 'Günlük Notlar')}
+                        ${navItem('classes', 'fa-children', 'Sınıflar &amp; Öğrenciler')}
+                        ${navItem('settings', 'fa-gear', 'Ayarlar')}
+                    </nav>
+                    <div class="border-t border-slate-100 pt-2">${lessonList}</div>
+                </div>`;
+        }
+
+        function setClass(id) { db.activeClass = id; saveDB(); render(); }
+
+        function go(view) {
+            playSound('click');
+            state.view = view; state.lesson = null;
+            if (window.innerWidth < 1024) setSidebar(false);
+            render(); window.scrollTo(0, 0);
+        }
+
+        /* ───────── RENDER ───────── */
+        function render() {
+            renderSidebar();
+            const c = activeClass();
+            $('headerClass').innerHTML = c ? `<i class="fa-solid fa-children text-amber-500"></i> ${esc(c.name)}` : '';
+            $('headerClass').classList.toggle('md:flex', !!c);
+            const views = { home: viewHome, attendance: viewAttendance, notes: viewNotes, classes: viewClasses, settings: viewSettings, lesson: viewLesson, sim: viewSim };
+            $('view').innerHTML = (views[state.view] || viewHome)();
+            if (state.view === 'sim') $('simFrame').srcdoc = ({ wedo: SIM_WEDO, vinci: SIM_VINCI }[state.simApp] || SIM_HTML).replace('__SIM_MODE__', state.simMode || '');
+        }
+
+        const emptyClassCard = () => `
+            <div class="max-w-xl mx-auto bg-white rounded-3xl p-8 shadow-xl border border-slate-200 text-center">
+                <div class="text-5xl mb-2">🧒</div>
+                <h3 class="font-fredoka text-xl font-bold text-slate-800">Önce bir sınıf ekle</h3>
+                <p class="text-sm text-slate-500 mt-1">Yoklama ve notlar için sınıf ve öğrenci listesi gerekir.</p>
+                <button onclick="go('classes')" class="mt-4 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold shadow-md active:scale-95 transition">Sınıf Ekle</button>
+            </div>`;
+
+        /* ───────── ANA SAYFA: KONULAR VE DERS KARTLARI ───────── */
+        function viewHome() {
+            const c = activeClass(), done = (c && db.done[c.id]) || {};
+            const n = LESSONS.filter(l => done[l.id]).length, pct = Math.round(n / LESSONS.length * 100);
+            const hero = `
+                <div class="rounded-3xl p-5 md:p-6 bg-gradient-to-r from-amber-400 via-pink-500 to-indigo-500 text-white shadow-xl flex flex-col md:flex-row md:items-center gap-4">
+                    <div class="text-5xl">👩‍🏫</div>
+                    <div class="flex-1">
+                        <h2 class="font-fredoka text-2xl font-bold">Merhaba Kardelen Öğretmen!</h2>
+                        <p class="text-sm opacity-95">Bir ders kartına dokun, ders sunumu açılsın. Kodeksan ders planı: Elektrik Devresi ve WeDo 2.0, her hafta 2 ders.</p>
+                    </div>
+                    <div class="md:w-64 bg-white/20 rounded-2xl p-3">
+                        <p class="font-fredoka font-bold text-sm">${c ? esc(c.name) + ' ilerlemesi' : 'Sınıf seçilmedi'}</p>
+                        <div class="h-3 rounded-full bg-white/30 mt-1.5 overflow-hidden"><div class="h-full bg-white rounded-full transition-all" style="width:${pct}%"></div></div>
+                        <p class="text-xs font-bold mt-1">${n} / ${LESSONS.length} ders işlendi</p>
+                    </div>
+                </div>`;
+            const simBtn = (app, mode, emo, title, desc, cls) => `<button onclick="openSim('${app}:${mode}')" class="text-left rounded-3xl border-2 ${cls} p-4 md:p-5 shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-95 transition flex items-center gap-4">
+                <span class="text-5xl">${emo}</span>
+                <span><span class="font-fredoka font-bold text-lg text-slate-800 block">${title}</span><span class="text-xs text-slate-600">${desc}</span></span>
+                <i class="fa-solid fa-arrow-right ml-auto text-slate-400"></i></button>`;
+            const simCard = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                ${simBtn('elek', '', '🔬', 'Elektrik Devresi Simülasyonu', 'Devre kur, LED’i yak, anahtarı dene, gece lambasını karanlıkta gör.', 'border-amber-300 hover:border-amber-500 bg-gradient-to-r from-amber-100 via-pink-50 to-sky-100')}
+                ${simBtn('wedo', 'intro', '🧱', 'WeDo 2.0 Simülasyonu', 'Uygulamaya giriş adımları, parça kutusu oyunu ve proje kodlama.', 'border-sky-300 hover:border-sky-500 bg-gradient-to-r from-sky-100 via-lime-50 to-emerald-100')}
+                ${simBtn('vinci', 'robot', '🤖', 'VinciBot Simülasyonu', 'Robotu tanı, blokla kodla, yıldız topla ve kalemle şekil çiz.', 'border-emerald-300 hover:border-emerald-500 bg-gradient-to-r from-emerald-100 via-teal-50 to-sky-100')}
+            </div>`;
+            const topics = TOPICS.map(t => {
+                const C = COLORS[t.color];
+                const cards = LESSONS.filter(l => l.topic === t.id).map(l => {
+                    const isDone = !!done[l.id];
+                    return `<button onclick="openLesson('${l.id}')" class="text-left rounded-3xl border-2 bg-gradient-to-br ${C.card} p-4 shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-95 transition flex flex-col gap-2">
+                        <div class="flex items-center justify-between">
+                            <span class="w-9 h-9 rounded-xl ${C.badge} text-white font-fredoka font-bold flex items-center justify-center">${l.no}</span>
+                            ${isDone ? '<span class="text-xs font-bold bg-emerald-500 text-white rounded-full px-2.5 py-1"><i class="fa-solid fa-check"></i> İşlendi</span>' : ''}
+                        </div>
+                        <div class="text-4xl">${l.emoji}</div>
+                        <h4 class="font-fredoka font-bold text-base ${C.text}">${esc(l.title)}</h4>
+                        <p class="text-xs text-slate-600">${esc(l.short)}</p>
+                        <p class="text-[11px] font-bold text-slate-500 mt-auto pt-1"><i class="fa-solid fa-clock"></i> ${l.tag ? esc(l.tag) + ' • ' : ''}${lessonMin(l)} dk • ${l.slides.length} slayt • ${l.quiz.length} soru</p>
+                    </button>`;
+                }).join('');
+                const body = cards || `<p class="text-sm text-slate-500 bg-slate-50 rounded-2xl border border-dashed border-slate-300 p-4">📄 Ders planında bu bölüm henüz boş. Plan gelince buraya eklenecek.</p>${t.sim ? `<button onclick="openSim('${t.sim}')" class="mt-3 px-4 py-2.5 rounded-xl ${C.btn} text-white font-fredoka font-bold text-sm shadow-md active:scale-95 transition">🔬 Simülasyonu aç</button>` : ''}`;
+                return `<section class="bg-white rounded-3xl p-4 md:p-5 shadow-xl border border-slate-200/80">
+                    <div class="flex items-center gap-3 border-b border-slate-100 pb-3 mb-4">
+                        <span class="w-11 h-11 rounded-2xl ${C.badge} text-white flex items-center justify-center text-2xl shadow-md">${t.emoji}</span>
+                        <div><h3 class="font-fredoka text-lg font-bold text-slate-800">${esc(t.title)}</h3><p class="text-xs text-slate-500">${esc(t.desc)}</p></div>
+                    </div>
+                    ${cards ? `<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">${cards}</div>` : body}
+                </section>`;
+            }).join('');
+            return `<div class="max-w-6xl mx-auto flex flex-col gap-6">${hero}${simCard}${topics}</div>`;
+        }
+
+        /* ───────── SİMÜLASYON LABORATUVARI (gömülü) ───────── */
+        function openSim(spec) {
+            const [app, mode] = (spec || 'elek').split(':');
+            state.simApp = app; state.simMode = mode || '';
+            go('sim');
+        }
+        function viewSim() {
+            const tab = (app, mode, label) => `<button onclick="openSim('${app}:${mode}')" class="px-4 py-2 rounded-xl font-fredoka font-bold text-sm shadow-sm active:scale-95 transition border ${state.simApp === app ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'}">${label}</button>`;
+            return `<div class="max-w-7xl mx-auto flex flex-col gap-3">
+                <div class="flex flex-wrap gap-2">${tab('elek', '', '⚡ Elektrik Devresi')}${tab('wedo', 'intro', '🧱 WeDo 2.0')}${tab('vinci', 'robot', '🤖 VinciBot')}</div>
+                <iframe id="simFrame" title="Simülasyon Laboratuvarı" class="w-full rounded-3xl border border-slate-200 bg-white shadow-xl" style="height:calc(100vh - 9rem);height:calc(100dvh - 9rem);min-height:32rem"></iframe></div>`;
+        }
+        const lessonMin = l => l.teacher.flow.reduce((s, f) => s + f.m, 0);
+        const imgTag = (k, cls) => (typeof IMG !== 'undefined' && IMG[k]) ? `<img src="${IMG[k]}" alt="" class="${cls}">` : '';
+
+        /* ───────── DERS SUNUMU ───────── */
+        function openLesson(id) {
+            playSound('click');
+            state.view = 'lesson';
+            state.lesson = { id, i: 0, score: 0, answered: {}, teacher: false };
+            setSidebar(false);
+            render(); window.scrollTo(0, 0);
+        }
+        function stepsOf(L) {
+            return [...L.slides.map(s => ({ k: 's', ...s })), ...L.quiz.map(q => ({ k: 'q', ...q })), { k: 'r' }];
+        }
+        function lessonGo(d) {
+            const st = state.lesson, steps = stepsOf(lessonOf(st.id));
+            const ni = Math.max(0, Math.min(steps.length - 1, st.i + d));
+            if (ni === st.i) return;
+            playSound('click'); st.i = ni; render();
+        }
+        function answerQ(idx) {
+            const st = state.lesson, L = lessonOf(st.id), step = stepsOf(L)[st.i];
+            if (st.answered[st.i] !== undefined) return;
+            st.answered[st.i] = idx;
+            if (idx === step.c) { st.score++; playSound('glow'); safeConfetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } }); }
+            else playSound('warn');
+            render();
+        }
+        function toggleTeacherNote() { state.lesson.teacher = !state.lesson.teacher; playSound('click'); render(); }
+        /* iPhone'da tam ekran API'si yok (yalnız video); Safari/eski Android webkit önekiyle */
+        const fsEl = document.documentElement;
+        const canFullscreen = !!(fsEl.requestFullscreen || fsEl.webkitRequestFullscreen);
+        function toggleFullscreen() {
+            try {
+                if (document.fullscreenElement || document.webkitFullscreenElement) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+                else (fsEl.requestFullscreen || fsEl.webkitRequestFullscreen).call(fsEl);
+            } catch (e) {}
+        }
+        function restartLesson() { const id = state.lesson.id; openLesson(id); }
+        function finishLesson() {
+            const L = lessonOf(state.lesson.id), c = activeClass();
+            if (c) { (db.done[c.id] = db.done[c.id] || {})[L.id] = todayISO(); saveDB(); toast('✅ Ders sınıfa işlendi'); }
+            else toast('Sınıf seçilmediği için ilerleme işlenmedi.');
+            state.noteDraft = { lessonId: L.id };
+            state.noteEdit = null; state.view = 'notes'; state.lesson = null;
+            render(); window.scrollTo(0, 0);
+        }
+
+        function viewLesson() {
+            const st = state.lesson, L = lessonOf(st.id), T = topicOf(L.topic), C = COLORS[T.color];
+            const steps = stepsOf(L), step = steps[st.i], last = steps.length - 1;
+            const pct = Math.round(st.i / last * 100);
+
+            const toolbar = `
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                    <button onclick="go('home')" class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 font-fredoka font-bold text-sm hover:bg-slate-50 active:scale-95 transition shadow-sm"><i class="fa-solid fa-arrow-left"></i> Derslere dön</button>
+                    <div class="flex items-center gap-2">
+                        <button onclick="openSim('${L.sim || 'elek'}')" class="px-3.5 py-2 rounded-xl font-fredoka font-bold text-sm active:scale-95 transition shadow-sm border bg-sky-50 text-sky-800 border-sky-200 hover:bg-sky-100">🔬 Simülasyon</button>
+                        <button onclick="toggleTeacherNote()" class="px-3.5 py-2 rounded-xl font-fredoka font-bold text-sm active:scale-95 transition shadow-sm border ${st.teacher ? 'bg-amber-500 text-white border-amber-500' : 'bg-amber-50 text-amber-800 border-amber-200 hover:bg-amber-100'}">👩‍🏫 Öğretmen Notu</button>
+                        <button onclick="toggleFullscreen()" aria-label="Tam ekran" class="${canFullscreen ? '' : 'hidden'} w-10 h-10 rounded-xl bg-slate-800 text-white hover:bg-slate-700 active:scale-95 transition shadow-sm"><i class="fa-solid fa-expand"></i></button>
+                    </div>
+                </div>`;
+
+            const head = `
+                <div class="flex items-center gap-3">
+                    <span class="w-11 h-11 rounded-2xl ${C.badge} text-white flex items-center justify-center text-2xl shadow-md shrink-0">${L.emoji}</span>
+                    <div class="min-w-0"><p class="text-xs font-bold ${C.head}">${T.emoji} ${esc(T.title)} • ${L.tag ? esc(L.tag) : 'Ders ' + L.no}</p><h2 class="font-fredoka text-lg md:text-2xl font-bold text-slate-800">${esc(L.title)}</h2></div>
+                    <span class="ml-auto text-xs font-bold text-slate-400 shrink-0">${st.i + 1} / ${steps.length}</span>
+                </div>
+                <div class="h-2.5 rounded-full bg-slate-200 overflow-hidden"><div class="h-full ${C.bar} rounded-full transition-all duration-500" style="width:${pct}%"></div></div>`;
+
+            let body = '';
+            if (step.k === 's') {
+                const bullets = step.b ? `<ul class="mt-5 grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">${step.b.map(b => `<li class="rounded-2xl border ${C.soft} px-4 py-3 font-fredoka font-bold text-base md:text-xl">${esc(b)}</li>`).join('')}</ul>` : '';
+                body = `<div class="text-center py-4 md:py-8">
+                    ${step.img ? imgTag(step.img, 'mx-auto max-h-[22rem] rounded-2xl shadow-lg border border-slate-200') : `<div class="text-7xl md:text-8xl">${step.e}</div>`}
+                    <h3 class="font-fredoka text-2xl md:text-5xl font-bold text-slate-800 mt-4">${esc(step.t)}</h3>
+                    ${step.p ? `<p class="text-lg md:text-3xl text-slate-600 font-semibold mt-4 leading-snug max-w-3xl mx-auto">${esc(step.p)}</p>` : ''}
+                    ${bullets}
+                </div>`;
+            } else if (step.k === 'q') {
+                const a = st.answered[st.i], done = a !== undefined, qn = L.quiz.indexOf(L.quiz.find(q => q.q === step.q && q.x === step.x)) + 1;
+                const opts = step.o.map((o, i) => {
+                    let cls = 'border-slate-200 bg-white text-slate-700 hover:border-amber-400 hover:bg-amber-50/50 active:scale-95';
+                    if (done && i === step.c) cls = 'border-emerald-500 bg-emerald-50 text-emerald-900';
+                    else if (done && i === a) cls = 'border-red-500 bg-red-50 text-red-900';
+                    else if (done) cls = 'border-slate-200 bg-white text-slate-400';
+                    const letter = step.o.length > 2 ? `${'ABCD'[i]}) ` : '';
+                    return `<button ${done ? 'disabled' : ''} onclick="answerQ(${i})" class="w-full p-4 md:p-5 rounded-2xl border-2 font-fredoka font-bold text-base md:text-2xl text-left shadow-sm transition ${cls}">${letter}${esc(o)}</button>`;
+                }).join('');
+                const fb = done ? (a === step.c
+                    ? `<div class="p-4 rounded-xl text-center font-fredoka text-sm md:text-lg font-bold mt-4 bg-emerald-100 text-emerald-900 border border-emerald-300">🎉 DOĞRU! ${esc(step.x)}</div>`
+                    : `<div class="p-4 rounded-xl text-center font-fredoka text-sm md:text-lg font-bold mt-4 bg-red-100 text-red-900 border border-red-300">❌ YANLIŞ! ${esc(step.x)}</div>`) : '';
+                body = `<div class="py-2 md:py-4">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-400 mb-2"><span>Soru ${qn} / ${L.quiz.length}</span><span class="text-amber-400 text-sm"><i class="fa-solid fa-star"></i> ${st.score}</span></div>
+                    ${step.lead ? `<p class="font-fredoka font-bold text-sm md:text-lg ${C.head} mb-1">${esc(step.lead)}</p>` : ''}
+                    <h3 class="font-fredoka text-xl md:text-4xl font-bold text-slate-800 mb-5">${esc(step.q)}</h3>
+                    <div class="grid grid-cols-1 ${step.o.length > 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2'} gap-3">${opts}</div>${fb}
+                </div>`;
+            } else {
+                const total = L.quiz.length;
+                let stars = ''; for (let i = 0; i < total; i++) stars += i < st.score ? '⭐' : '⚪';
+                body = `<div class="text-center py-6 md:py-8">
+                    <div class="text-6xl mb-3">🎉</div>
+                    <h3 class="font-fredoka text-2xl md:text-4xl font-bold text-slate-800">Ders Tamamlandı!</h3>
+                    <p class="text-base md:text-xl text-slate-600 mt-2">${total} sorudan ${st.score} tanesini doğru yanıtladık!</p>
+                    <div class="text-2xl md:text-3xl my-4 leading-relaxed break-words">${stars}</div>
+                    <div class="flex flex-wrap justify-center gap-3 mt-2">
+                        <button onclick="finishLesson()" class="px-6 py-3 ${C.btn} text-white font-fredoka font-bold rounded-xl shadow-lg active:scale-95 transition"><i class="fa-solid fa-check mr-2"></i> Dersi İşle ve Not Yaz</button>
+                        <button onclick="restartLesson()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-fredoka font-bold rounded-xl shadow-lg active:scale-95 transition"><i class="fa-solid fa-rotate-right mr-2"></i> Dersi Tekrar Et</button>
+                        <button onclick="go('home')" class="px-6 py-3 bg-white border border-slate-200 text-slate-700 font-fredoka font-bold rounded-xl shadow-sm active:scale-95 transition">Derslere Dön</button>
+                    </div>
+                </div>`;
+            }
+
+            const nav = `
+                <div class="flex items-center justify-between gap-3">
+                    <button onclick="lessonGo(-1)" ${st.i === 0 ? 'disabled' : ''} class="px-5 py-3 rounded-xl font-fredoka font-bold text-base shadow-md active:scale-95 transition ${st.i === 0 ? 'bg-slate-200 text-slate-400' : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50'}"><i class="fa-solid fa-arrow-left mr-1"></i> Önceki</button>
+                    <button onclick="lessonGo(1)" ${st.i === last ? 'disabled' : ''} class="px-5 py-3 rounded-xl font-fredoka font-bold text-base shadow-md active:scale-95 transition ${st.i === last ? 'bg-slate-200 text-slate-400' : C.btn + ' text-white'}">${step.k === 'q' ? 'Sonraki Soru' : 'Sonraki'} <i class="fa-solid fa-arrow-right ml-1"></i></button>
+                </div>`;
+
+            return `<div class="max-w-4xl mx-auto flex flex-col gap-4">
+                ${toolbar}
+                <div class="bg-white rounded-3xl p-4 md:p-8 shadow-xl border border-slate-200/80 flex flex-col gap-4">${head}<div class="min-h-[18rem]">${body}</div>${nav}</div>
+                ${st.teacher ? teacherPanel(L) : ''}
+            </div>`;
+        }
+
+        function teacherPanel(L) {
+            const t = L.teacher;
+            const flow = t.flow.map(f => `
+                <div><p class="text-xs font-bold text-slate-400">${f.m ? f.m + ' Dakika' : 'Ders öncesi'}</p>
+                <h4 class="font-fredoka text-base font-bold text-slate-800 mt-0.5">${esc(f.t)}</h4>
+                <p class="text-sm text-slate-700 mt-0.5">${esc(f.x)}</p></div>`).join('');
+            const li = a => a.map(x => `<p class="text-sm text-slate-700 mb-1.5">${x}</p>`).join('');
+            return `<div class="bg-white rounded-3xl p-5 md:p-6 shadow-xl border border-amber-200">
+                <h3 class="font-fredoka text-xl font-bold text-blue-600 flex items-center gap-2">👩‍🏫 Öğretmen Ders Planı &amp; Sunum Rehberi</h3>
+                <p class="text-xs text-slate-500 mt-0.5 mb-4">${esc(L.title)} • ${L.tag ? esc(L.tag) + ' • ' : ''}${lessonMin(L)} dakika${lessonMin(L) > 40 ? ' (2 ders)' : ''}</p>
+                <h4 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 mb-3"><span class="w-7 h-7 rounded-full bg-amber-400 text-white flex items-center justify-center text-sm"><i class="fa-solid fa-clock"></i></span> Ders Akışı</h4>
+                <div class="border-l-2 border-slate-200 ml-3 pl-5 flex flex-col gap-4">${flow}</div>
+                ${(t.figs || []).length ? `<div class="mt-5 rounded-2xl border border-slate-200 p-4"><h4 class="font-fredoka font-bold text-slate-700 mb-2"><i class="fa-solid fa-image"></i> Ders Planındaki Şekiller</h4><div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${t.figs.map(([k, cap]) => `<figure>${imgTag(k, 'w-full rounded-xl border border-slate-200')}<figcaption class="text-xs font-bold text-slate-500 mt-1">${esc(cap)}</figcaption></figure>`).join('')}</div></div>` : ''}
+                <div class="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4"><h4 class="font-fredoka font-bold text-sky-700 mb-1.5"><i class="fa-solid fa-box-open"></i> Malzemeler</h4>${li(t.materials.map(m => '• ' + esc(m)))}</div>
+                <div class="mt-3 rounded-2xl border border-slate-200 p-4"><h4 class="font-fredoka font-bold text-emerald-700 mb-1.5"><i class="fa-solid fa-comment-dots"></i> Örnek Öğretmen Replikleri</h4>${t.lines.map(x => `<p class="text-sm text-slate-700 italic mb-1.5">💬 ${esc(x)}</p>`).join('')}</div>
+                <div class="mt-3 rounded-2xl border border-slate-200 p-4"><h4 class="font-fredoka font-bold text-red-600 mb-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Güvenlik ve İpuçları</h4>${t.safety.map(x => `<p class="text-sm text-slate-700 mb-1.5">⚠️ ${esc(x)}</p>`).join('')}</div>
+            </div>`;
+        }
+
+        /* ───────── YOKLAMA ───────── */
+        const STATUS = {
+            v: { label: 'Var', icon: '✅', on: 'bg-emerald-500 text-white border-emerald-500' },
+            y: { label: 'Yok', icon: '❌', on: 'bg-red-500 text-white border-red-500' },
+            i: { label: 'İzinli', icon: '🟡', on: 'bg-amber-400 text-white border-amber-400' }
+        };
+        function setAtt(sid, val) {
+            const c = activeClass(); playSound('click');
+            const day = ((db.attendance[c.id] = db.attendance[c.id] || {})[state.attDate] = db.attendance[c.id][state.attDate] || {});
+            if (day[sid] === val) delete day[sid]; else day[sid] = val;
+            if (!Object.keys(day).length) delete db.attendance[c.id][state.attDate];
+            saveDB(); render();
+        }
+        function allPresent() {
+            const c = activeClass(); playSound('glow');
+            const day = ((db.attendance[c.id] = db.attendance[c.id] || {})[state.attDate] = {});
+            c.students.forEach(s => day[s.id] = 'v');
+            saveDB(); render();
+        }
+        function setAttDate(v) { if (v) { state.attDate = v; render(); } }
+        function countDay(day) { const r = { v: 0, y: 0, i: 0 }; Object.values(day || {}).forEach(x => r[x]++); return r; }
+
+        function viewAttendance() {
+            const c = activeClass();
+            if (!c) return emptyClassCard();
+            if (!c.students.length) return `<div class="max-w-xl mx-auto bg-white rounded-3xl p-8 shadow-xl border border-slate-200 text-center"><div class="text-5xl mb-2">📋</div><h3 class="font-fredoka text-xl font-bold">${esc(c.name)} sınıfında öğrenci yok</h3><button onclick="go('classes')" class="mt-4 px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold shadow-md">Öğrenci Ekle</button></div>`;
+            const day = (db.attendance[c.id] || {})[state.attDate] || {};
+            const cnt = countDay(day), unmarked = c.students.length - cnt.v - cnt.y - cnt.i;
+            const rows = c.students.map((s, n) => `
+                <div class="flex items-center justify-between gap-2 p-3 rounded-2xl border border-slate-200/80 bg-slate-50 flex-wrap">
+                    <span class="font-fredoka font-bold text-sm text-slate-700 min-w-0"><span class="text-slate-400 mr-1.5">${n + 1}.</span>${esc(s.name)}</span>
+                    <div class="flex gap-1.5">${Object.keys(STATUS).map(k => `<button onclick="setAtt('${s.id}','${k}')" class="px-3 py-2 rounded-xl border-2 font-fredoka font-bold text-xs active:scale-95 transition ${day[s.id] === k ? STATUS[k].on : 'bg-white text-slate-500 border-slate-200'}">${STATUS[k].icon} ${STATUS[k].label}</button>`).join('')}</div>
+                </div>`).join('');
+            const hist = Object.keys(db.attendance[c.id] || {}).sort().reverse().map(d => {
+                const h = countDay(db.attendance[c.id][d]);
+                return `<button onclick="setAttDate('${d}')" class="w-full flex items-center justify-between gap-2 px-3.5 py-2.5 rounded-xl border text-left text-xs font-bold active:scale-95 transition ${d === state.attDate ? 'bg-amber-50 border-amber-300 text-amber-800' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}"><span>${fmtDate(d)}</span><span>✅ ${h.v} • ❌ ${h.y} • 🟡 ${h.i}</span></button>`;
+            }).join('') || '<p class="text-xs text-slate-400">Henüz kayıtlı yoklama yok.</p>';
+            return `<div class="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col gap-4">
+                    <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2"><i class="fa-solid fa-clipboard-check text-emerald-500"></i> Yoklama • ${esc(c.name)}</h2>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <input type="date" value="${state.attDate}" onchange="setAttDate(this.value)" class="px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 font-fredoka font-bold text-sm focus:outline-none focus:border-amber-400">
+                        <button onclick="allPresent()" class="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-fredoka font-bold text-sm shadow-md active:scale-95 transition">Hepsi Geldi</button>
+                    </div>
+                    <p class="text-xs font-bold text-slate-500">${fmtDate(state.attDate)}</p>
+                    <div class="flex flex-wrap gap-2 text-xs font-bold">
+                        <span class="px-3 py-1.5 rounded-full bg-emerald-100 text-emerald-800">✅ Var: ${cnt.v}</span>
+                        <span class="px-3 py-1.5 rounded-full bg-red-100 text-red-800">❌ Yok: ${cnt.y}</span>
+                        <span class="px-3 py-1.5 rounded-full bg-amber-100 text-amber-800">🟡 İzinli: ${cnt.i}</span>
+                        <span class="px-3 py-1.5 rounded-full bg-slate-100 text-slate-600">İşaretlenmedi: ${unmarked}</span>
+                    </div>
+                    <div class="flex flex-col gap-2">${rows}</div>
+                    <p class="text-xs text-slate-400"><i class="fa-solid fa-floppy-disk"></i> Her dokunuşta otomatik kaydedilir.</p>
+                </div>
+                <div class="bg-white rounded-3xl p-4 md:p-5 shadow-xl border border-slate-200/80 flex flex-col gap-2 self-start">
+                    <h3 class="font-fredoka font-bold text-slate-800 border-b border-slate-100 pb-2 mb-1"><i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Geçmiş Yoklamalar</h3>${hist}
+                </div>
+            </div>`;
+        }
+
+        /* ───────── GÜNLÜK NOTLAR ───────── */
+        function viewNotes() {
+            const c = activeClass();
+            if (!c) return emptyClassCard();
+            const edit = state.noteEdit ? db.notes.find(n => n.id === state.noteEdit) : null;
+            const draft = edit || state.noteDraft || {};
+            const dateV = edit ? edit.date : todayISO();
+            const lessonOpts = '<option value="">— Ders seçilmedi —</option>' + LESSONS.map(l => `<option value="${l.id}" ${draft.lessonId === l.id ? 'selected' : ''}>${esc(topicOf(l.topic).title)} • ${esc(l.tag || 'Ders ' + l.no)}: ${esc(l.title)}</option>`).join('');
+            const list = db.notes.filter(n => n.classId === c.id).sort((a, b) => (b.date + b.ts).localeCompare(a.date + a.ts)).map(n => {
+                const L = n.lessonId ? lessonOf(n.lessonId) : null, C = L ? COLORS[topicOf(L.topic).color] : null;
+                return `<div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <p class="font-fredoka font-bold text-sm text-slate-700">${fmtDate(n.date)}</p>
+                        <div class="flex gap-1.5">
+                            <button onclick="editNote('${n.id}')" aria-label="Düzenle" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-amber-600"><i class="fa-solid fa-pen"></i></button>
+                            <button onclick="deleteNote('${n.id}')" aria-label="Sil" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    ${L ? `<span class="inline-block mt-1.5 px-2.5 py-1 rounded-full text-xs font-bold text-white ${C.badge}">${L.emoji} Ders ${L.no}: ${esc(L.title)}</span>` : ''}
+                    ${n.did ? `<p class="text-xs font-bold text-slate-400 mt-2">Bugün yaptıklarımız</p><p class="text-sm text-slate-700 whitespace-pre-wrap">${esc(n.did)}</p>` : ''}
+                    ${n.obs ? `<p class="text-xs font-bold text-slate-400 mt-2">Gözlem / Sonraki ders için</p><p class="text-sm text-slate-700 whitespace-pre-wrap">${esc(n.obs)}</p>` : ''}
+                </div>`;
+            }).join('') || '<p class="text-sm text-slate-400">Bu sınıf için henüz not yok.</p>';
+            return `<div class="max-w-4xl mx-auto flex flex-col gap-6">
+                <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col gap-3">
+                    <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2"><i class="fa-solid fa-pen-to-square text-amber-500"></i> ${edit ? 'Notu Düzenle' : 'Günlük Not'} • ${esc(c.name)}</h2>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div><label class="font-fredoka font-bold text-xs text-slate-500 block mb-1">Tarih</label><input id="noteDate" type="date" value="${dateV}" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 font-fredoka font-bold text-sm focus:outline-none focus:border-amber-400"></div>
+                        <div><label class="font-fredoka font-bold text-xs text-slate-500 block mb-1">İşlenen Ders</label><select id="noteLesson" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 font-fredoka font-bold text-sm focus:outline-none focus:border-amber-400">${lessonOpts}</select></div>
+                    </div>
+                    <div><label class="font-fredoka font-bold text-xs text-slate-500 block mb-1">Bugün neler yaptık?</label><textarea id="noteDid" rows="3" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold text-sm focus:outline-none focus:border-amber-400" placeholder="Örn: Pil ve LED ile ışığı yaktık, anahtar ekledik.">${esc(draft.did || '')}</textarea></div>
+                    <div><label class="font-fredoka font-bold text-xs text-slate-500 block mb-1">Gözlem / sonraki ders için not</label><textarea id="noteObs" rows="3" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold text-sm focus:outline-none focus:border-amber-400" placeholder="Örn: 2 grup LED yönünü karıştırdı, tekrar edelim.">${esc(draft.obs || '')}</textarea></div>
+                    <div class="flex gap-2">
+                        <button onclick="saveNote()" class="px-6 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold shadow-md active:scale-95 transition"><i class="fa-solid fa-floppy-disk mr-1"></i> ${edit ? 'Güncelle' : 'Kaydet'}</button>
+                        ${edit ? '<button onclick="cancelEdit()" class="px-5 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl font-fredoka font-bold active:scale-95 transition">Vazgeç</button>' : ''}
+                    </div>
+                </div>
+                <div class="bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col gap-3">
+                    <h3 class="font-fredoka font-bold text-slate-800 border-b border-slate-100 pb-2"><i class="fa-solid fa-book-open text-blue-500"></i> Geçmiş Notlar</h3>${list}
+                </div>
+            </div>`;
+        }
+        function saveNote() {
+            const c = activeClass();
+            const rec = { date: $('noteDate').value || todayISO(), lessonId: $('noteLesson').value, did: $('noteDid').value.trim(), obs: $('noteObs').value.trim() };
+            if (!rec.did && !rec.obs) { toast('Önce bir şeyler yaz 🙂'); return; }
+            if (state.noteEdit) Object.assign(db.notes.find(n => n.id === state.noteEdit), rec);
+            else db.notes.push({ id: uid(), classId: c.id, ts: String(Date.now()), ...rec });
+            if (rec.lessonId) { (db.done[c.id] = db.done[c.id] || {})[rec.lessonId] = db.done[c.id][rec.lessonId] || rec.date; }
+            state.noteEdit = null; state.noteDraft = null; saveDB(); toast('✅ Not kaydedildi'); render();
+        }
+        function editNote(id) { state.noteEdit = id; render(); window.scrollTo(0, 0); }
+        function cancelEdit() { state.noteEdit = null; render(); }
+        function deleteNote(id) { if (!confirm('Bu not silinsin mi?')) return; db.notes = db.notes.filter(n => n.id !== id); saveDB(); render(); }
+
+        /* ───────── SINIFLAR & ÖĞRENCİLER ───────── */
+        function addClass() {
+            const inp = $('newClass'), name = inp.value.trim();
+            if (!name) { toast('Sınıf adını yaz (örn. 3-A)'); return; }
+            const c = { id: uid(), name, students: [] };
+            db.classes.push(c); db.activeClass = c.id; saveDB(); toast('✅ Sınıf eklendi'); render();
+        }
+        function addStudents(cid) {
+            const ta = $('stu-' + cid), c = db.classes.find(x => x.id === cid);
+            const names = ta.value.split('\n').map(s => s.trim()).filter(Boolean);
+            if (!names.length) { toast('Her satıra bir öğrenci adı yaz'); return; }
+            names.forEach(n => c.students.push({ id: uid(), name: n }));
+            saveDB(); toast(`✅ ${names.length} öğrenci eklendi`); render();
+        }
+        function removeStudent(cid, sid) {
+            const c = db.classes.find(x => x.id === cid), s = c.students.find(x => x.id === sid);
+            if (!confirm(`${s.name} listeden çıkarılsın mı? (Geçmiş yoklamalardaki kaydı da silinir)`)) return;
+            c.students = c.students.filter(x => x.id !== sid);
+            Object.values(db.attendance[cid] || {}).forEach(day => delete day[sid]);
+            saveDB(); render();
+        }
+        function removeClass(cid) {
+            const c = db.classes.find(x => x.id === cid);
+            if (!confirm(`${c.name} sınıfı; öğrencileri, yoklamaları ve notlarıyla birlikte silinsin mi?`)) return;
+            db.classes = db.classes.filter(x => x.id !== cid);
+            delete db.attendance[cid]; delete db.done[cid]; db.notes = db.notes.filter(n => n.classId !== cid);
+            if (db.activeClass === cid) db.activeClass = db.classes[0] ? db.classes[0].id : null;
+            saveDB(); render();
+        }
+        function absences(cid, sid) { return Object.values(db.attendance[cid] || {}).filter(d => d[sid] === 'y').length; }
+
+        function viewClasses() {
+            const cards = db.classes.map(c => `
+                <div class="rounded-2xl border-2 ${c.id === db.activeClass ? 'border-amber-400 bg-amber-50/40' : 'border-slate-200 bg-slate-50'} p-4 flex flex-col gap-3">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <h3 class="font-fredoka font-bold text-lg text-slate-800">${esc(c.name)} <span class="text-xs font-bold text-slate-400">${c.students.length} öğrenci</span></h3>
+                        <div class="flex gap-1.5">
+                            ${c.id === db.activeClass ? '<span class="px-3 py-1.5 rounded-lg bg-amber-400 text-white text-xs font-fredoka font-bold">Aktif</span>' : `<button onclick="setClass('${c.id}')" class="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-fredoka font-bold text-slate-600 hover:bg-slate-50">Aktif yap</button>`}
+                            <button onclick="removeClass('${c.id}')" aria-label="Sınıfı sil" class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-500 hover:text-red-600"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-1.5">${c.students.map((s, n) => `
+                        <div class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white border border-slate-200/80 text-sm font-bold text-slate-700">
+                            <span class="min-w-0"><span class="text-slate-400 mr-1.5">${n + 1}.</span>${esc(s.name)}</span>
+                            <span class="flex items-center gap-2 shrink-0"><span class="text-[11px] text-red-500">${absences(c.id, s.id)} devamsızlık</span>
+                            <button onclick="removeStudent('${c.id}','${s.id}')" aria-label="Çıkar" class="w-7 h-7 rounded-lg text-slate-400 hover:text-red-600"><i class="fa-solid fa-xmark"></i></button></span>
+                        </div>`).join('') || '<p class="text-xs text-slate-400">Henüz öğrenci yok.</p>'}</div>
+                    <div><label class="font-fredoka font-bold text-xs text-slate-500 block mb-1">Öğrenci ekle (her satıra bir isim)</label>
+                        <textarea id="stu-${c.id}" rows="3" class="w-full px-3 py-2 rounded-xl border-2 border-slate-200 bg-white font-semibold text-sm focus:outline-none focus:border-amber-400" placeholder="Ayşe Yılmaz&#10;Mehmet Demir"></textarea>
+                        <button onclick="addStudents('${c.id}')" class="mt-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold text-sm shadow-md active:scale-95 transition">Öğrencileri Ekle</button></div>
+                </div>`).join('');
+            return `<div class="max-w-3xl mx-auto bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col gap-4">
+                <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2"><i class="fa-solid fa-children text-pink-500"></i> Sınıflar &amp; Öğrenciler</h2>
+                <div class="flex gap-2"><input id="newClass" type="text" maxlength="30" placeholder="Yeni sınıf adı (örn. 3-A)" class="flex-1 min-w-0 px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 font-semibold focus:outline-none focus:border-amber-400">
+                    <button onclick="addClass()" class="px-5 py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-fredoka font-bold shadow-md active:scale-95 transition">+ Ekle</button></div>
+                ${cards || '<p class="text-sm text-slate-400">Henüz sınıf yok. Yukarıdan ekleyebilirsin.</p>'}
+            </div>`;
+        }
+
+        /* ───────── AYARLAR ───────── */
+        function changePw() {
+            const a = $('pw1').value, b = $('pw2').value;
+            if (a.length < 4) { toast('Şifre en az 4 karakter olsun'); return; }
+            if (a !== b) { toast('İki şifre aynı değil'); return; }
+            db.pwHash = hash(a); saveDB(); $('pw1').value = ''; $('pw2').value = ''; toast('✅ Şifre değiştirildi');
+        }
+        function download(name, text, type) {
+            const url = URL.createObjectURL(new Blob([text], { type }));
+            const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+        function exportData() { download(`kardelen-portal-yedek-${todayISO()}.json`, JSON.stringify(db, null, 2), 'application/json'); }
+        function importData(input) {
+            const f = input.files[0]; if (!f) return;
+            const r = new FileReader();
+            r.onload = () => {
+                try {
+                    const d = JSON.parse(r.result);
+                    if (!Array.isArray(d.classes) || !Array.isArray(d.notes)) throw new Error('bad');
+                    if (!confirm('Mevcut veriler bu yedekle DEĞİŞTİRİLSİN mi?')) return;
+                    db = Object.assign({ pwHash: null, classes: [], activeClass: null, attendance: {}, notes: [], done: {} }, d);
+                    saveDB(); toast('✅ Yedek yüklendi'); render();
+                } catch (e) { toast('⚠️ Geçerli bir yedek dosyası değil'); }
+                input.value = '';
+            };
+            r.readAsText(f);
+        }
+        function exportCSV() {
+            const c = activeClass(); if (!c) { toast('Önce sınıf seç'); return; }
+            const dates = Object.keys(db.attendance[c.id] || {}).sort();
+            const q = s => '"' + String(s).replace(/"/g, '""') + '"';
+            const rows = [[q('Öğrenci'), ...dates.map(q), q('Devamsızlık')].join(';')];
+            c.students.forEach(s => rows.push([q(s.name), ...dates.map(d => q(({ v: 'Var', y: 'Yok', i: 'İzinli' })[db.attendance[c.id][d][s.id]] || '')), absences(c.id, s.id)].join(';')));
+            download(`yoklama-${c.name}-${todayISO()}.csv`, '﻿' + rows.join('\r\n'), 'text/csv;charset=utf-8');
+        }
+        function wipeAll() {
+            if (!confirm('TÜM sınıflar, yoklamalar ve notlar silinsin mi? Bu işlem geri alınamaz.')) return;
+            const pw = db.pwHash; db = { pwHash: pw, classes: [], activeClass: null, attendance: {}, notes: [], done: {} };
+            saveDB(); toast('Tüm veriler silindi'); render();
+        }
+
+        function viewSettings() {
+            const box = 'bg-slate-50 rounded-2xl border border-slate-200/80 p-4 flex flex-col gap-2';
+            const btn = 'px-5 py-2.5 rounded-xl font-fredoka font-bold text-sm shadow-md active:scale-95 transition text-white';
+            return `<div class="max-w-2xl mx-auto bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col gap-4">
+                <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2"><i class="fa-solid fa-gear text-slate-500"></i> Ayarlar</h2>
+                <div class="${box}"><h3 class="font-fredoka font-bold text-slate-700"><i class="fa-solid fa-key text-amber-500"></i> Şifre Değiştir</h3>
+                    <input id="pw1" type="password" placeholder="Yeni şifre" class="px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-semibold focus:outline-none focus:border-amber-400">
+                    <input id="pw2" type="password" placeholder="Yeni şifre (tekrar)" class="px-4 py-3 rounded-xl border-2 border-slate-200 bg-white font-semibold focus:outline-none focus:border-amber-400">
+                    <button onclick="changePw()" class="${btn} bg-amber-500 hover:bg-amber-600 self-start">Şifreyi Kaydet</button></div>
+                <div class="${box}"><h3 class="font-fredoka font-bold text-slate-700"><i class="fa-solid fa-cloud-arrow-down text-sky-500"></i> Yedekle / Geri Yükle</h3>
+                    <p class="text-xs text-slate-500">Yoklama ve notlar yalnızca bu cihazın tarayıcısında saklanır. Düzenli yedek alman (ve telefon/bilgisayar değiştirirsen yüklemen) önerilir.</p>
+                    <div class="flex flex-wrap gap-2"><button onclick="exportData()" class="${btn} bg-sky-500 hover:bg-sky-600">Yedeği İndir</button>
+                    <button onclick="$('importFile').click()" class="${btn} bg-indigo-500 hover:bg-indigo-600">Yedeği Yükle</button>
+                    <button onclick="exportCSV()" class="${btn} bg-emerald-500 hover:bg-emerald-600">Yoklamayı İndir (Excel/CSV)</button></div></div>
+                <div class="bg-red-50 rounded-2xl border border-red-200 p-4 flex flex-col gap-2"><h3 class="font-fredoka font-bold text-red-700"><i class="fa-solid fa-triangle-exclamation"></i> Tehlikeli Bölge</h3>
+                    <button onclick="wipeAll()" class="${btn} bg-red-600 hover:bg-red-700 self-start">Tüm Verileri Sil</button></div>
+            </div>`;
+        }
+
+        /* ───────── KLAVYE (sunum için ← →) ───────── */
+        document.addEventListener('keydown', e => {
+            if (state.view !== 'lesson' || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+            if (e.key === 'ArrowRight') lessonGo(1);
+            else if (e.key === 'ArrowLeft') lessonGo(-1);
+        });
+
+        /* ───────── BAŞLANGIÇ ───────── */
+        window.addEventListener('load', () => {
+            loadDB();
+            let ok = false;
+            try { ok = sessionStorage.getItem('kp_ok') === '1'; } catch (e) {}
+            if (ok) enterApp(); else setTimeout(() => $('pwInput').focus(), 50);
+        });
+    </script>
+</body>
+</html>

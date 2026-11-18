@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kardelen'in Bilim Laboratuvarı: Basit Elektrik Devresi</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        labBg: '#f0f9ff',
+                        circuitDark: '#0f172a',
+                        electricYellow: '#facc15',
+                        electricBlue: '#38bdf8',
+                        warmAmber: '#fbbf24',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            user-select: none;
+        }
+
+        .electron-flow {
+            stroke-dasharray: 8 12;
+            animation: flow 1s linear infinite;
+        }
+
+        .electron-flow-reverse {
+            stroke-dasharray: 8 12;
+            animation: flow-reverse 1s linear infinite;
+        }
+
+        @keyframes flow {
+            from { stroke-dashoffset: 40; }
+            to { stroke-dashoffset: 0; }
+        }
+
+        @keyframes flow-reverse {
+            from { stroke-dashoffset: 0; }
+            to { stroke-dashoffset: 40; }
+        }
+
+        .led-glow-effect {
+            filter: drop-shadow(0 0 25px rgba(251, 191, 36, 0.95)) drop-shadow(0 0 50px rgba(245, 158, 11, 0.8));
+        }
+
+        .bottle-glow {
+            filter: drop-shadow(0 0 35px rgba(251, 207, 232, 0.9)) drop-shadow(0 0 60px rgba(244, 114, 182, 0.6));
+        }
+
+        .short-circuit-shake {
+            animation: shake 0.2s ease-in-out infinite;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(-3px, 2px) rotate(-1deg); }
+            75% { transform: translate(3px, -2px) rotate(1deg); }
+        }
+
+        /* Mobil: sekmeler tek satır, yatay kaydırılır */
+        .tab-btn { white-space: nowrap; flex-shrink: 0; }
+        #tabNav { -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        #tabNav::-webkit-scrollbar { display: none; }
+        @media (max-width: 640px) { .tab-btn { padding: 0.6rem 0.9rem !important; font-size: 0.875rem !important; } }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body id="appBody" class="h-full bg-slate-100 text-slate-800 transition-colors duration-700 flex flex-col min-h-screen">
+
+    <!-- TOP HEADER -->
+    <header class="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30 transition-colors duration-500 shadow-sm" id="topHeader">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-400 to-pink-500 flex items-center justify-center text-white shadow-md text-xl font-bold">
+                    🦋
+                </div>
+                <div>
+                    <h1 class="font-fredoka text-xl md:text-2xl font-bold bg-gradient-to-r from-amber-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">
+                        Kardelen'in Bilim Laboratuvarı
+                    </h1>
+                    <p class="text-xs text-slate-500 font-medium">Basit Elektrik Devresi & Kelebekli Gece Lambası Simülatörü</p>
+                </div>
+            </div>
+
+            <!-- Global Controls -->
+            <div class="flex items-center gap-2">
+                <button id="darkRoomBtn" onclick="toggleDarkRoom()" class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-800 text-white hover:bg-slate-700 active:scale-95 transition font-fredoka text-sm shadow-md">
+                    <i class="fa-solid font-bold text-amber-300 fa-moon" id="darkRoomIcon"></i>
+                    <span id="darkRoomText">Oda Işığını Kapat</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN CONTAINER -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 md:p-6 flex flex-col gap-6">
+
+        <!-- NAVIGATION TABS -->
+        <div class="flex border-b border-slate-300 gap-2 overflow-x-auto pb-1" id="tabNav">
+            <button onclick="switchTab('lab')" id="tab-lab" class="tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-amber-500 bg-white text-amber-600 shadow-sm transition">
+                <i class="fa-solid fa-flask"></i> 1. Devre Laboratuvarı
+            </button>
+            <button onclick="switchTab('test')" id="tab-test" class="tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-transparent text-slate-600 hover:text-amber-600 hover:bg-white/50 transition">
+                <i class="fa-solid fa-vial"></i> 2. İletken & Yalıtkan Testi
+            </button>
+            <button onclick="switchTab('quiz')" id="tab-quiz" class="tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-transparent text-slate-600 hover:text-amber-600 hover:bg-white/50 transition">
+                <i class="fa-solid fa-graduation-cap"></i> 3. Mini Bilgi Testi ⭐
+            </button>
+            <button onclick="switchTab('teacher')" id="tab-teacher" class="tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-transparent text-slate-600 hover:text-amber-600 hover:bg-white/50 transition">
+                <i class="fa-solid fa-chalkboard-user"></i> 4. Öğretmen Rehberi 👩‍🏫
+            </button>
+        </div>
+
+        <!-- TAB CONTENT 1 & 2: CIRCUIT SIMULATOR -->
+        <div id="simSection" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- LEFT PANEL: SVG CANVAS CIRCUIT BOARD -->
+            <div class="lg:col-span-8 bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col justify-between relative overflow-hidden transition-colors duration-500" id="circuitCanvasCard">
+                
+                <!-- Status Banner Top -->
+                <div id="statusBanner" class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center gap-3 transition-all duration-300 mb-4 shadow-sm">
+                    <div id="statusIcon" class="w-9 h-9 rounded-xl bg-amber-200 flex items-center justify-center text-amber-800 shrink-0 text-lg">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <div>
+                        <h3 id="statusTitle" class="font-fredoka font-bold text-base">Devre Hazır!</h3>
+                        <p id="statusDesc" class="text-xs text-slate-600">Anahtarı kapatarak elektrik akımını başlatın ve gece lambasını yakın.</p>
+                    </div>
+                </div>
+
+                <!-- SVG CIRCUIT INTERFACE -->
+                <div class="relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-center p-2 overflow-hidden transition-colors duration-700" id="svgContainer">
+                    
+                    <!-- Background Butterfly Watermarks in Dark Mode -->
+                    <div id="darkGlowOverlay" class="absolute inset-0 bg-slate-950/80 opacity-0 pointer-events-none transition-opacity duration-700 z-0 flex items-center justify-center">
+                        <div id="ambientLight" class="w-96 h-96 rounded-full bg-amber-400/10 blur-3xl transition-opacity duration-700 opacity-0"></div>
+                    </div>
+
+                    <svg viewBox="0 0 800 500" class="w-full h-full relative z-10 select-none" id="circuitSVG">
+                        <defs>
+                            <!-- Glow Filter for LED -->
+                            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                                <feGaussianBlur stdDeviation="12" result="blur" />
+                                <feMerge>
+                                    <feMergeNode in="blur" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                            <filter id="strongGlow" x="-100%" y="-100%" width="300%" height="300%">
+                                <feGaussianBlur stdDeviation="25" result="blur1" />
+                                <feGaussianBlur stdDeviation="10" result="blur2" />
+                                <feMerge>
+                                    <feMergeNode in="blur1" />
+                                    <feMergeNode in="blur2" />
+                                    <feMergeNode in="SourceGraphic" />
+                                </feMerge>
+                            </filter>
+                        </defs>
+
+                        <!-- CIRCUIT WIRES (BACKGROUND) -->
+                        <g id="wireGroup" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Main Path Bottom: Battery (-) to LED (-) -->
+                            <path id="wireNegative" d="M 220 380 L 100 380 L 100 160 L 560 160 L 560 210" fill="none" stroke="#dc2626" stroke-width="8"/>
+                            
+                            <!-- Main Path Top: Battery (+) to Switch -->
+                            <path id="wirePositive1" d="M 380 380 L 480 380" fill="none" stroke="#2563eb" stroke-width="8"/>
+                            
+                            <!-- Switch to Test Gap Left -->
+                            <path id="wirePositive2" d="M 580 380 L 680 380 L 680 320" fill="none" stroke="#2563eb" stroke-width="8"/>
+
+                            <!-- Test Gap Right to LED (+) -->
+                            <path id="wirePositive3" d="M 680 250 L 680 160 L 600 160 L 600 210" fill="none" stroke="#2563eb" stroke-width="8"/>
+
+                            <!-- Short Circuit Bypass Wire (Hidden by default) -->
+                            <path id="wireShort" d="M 380 380 C 400 450, 200 450, 220 380" fill="none" stroke="#ef4444" stroke-width="8" stroke-dasharray="6 6" class="hidden"/>
+
+                            <!-- Dynamic Electron Dots overlay paths -->
+                            <path id="electronPathMain" d="M 220 380 L 100 380 L 100 160 L 560 160 L 560 210 M 600 210 L 600 160 L 680 160 L 680 250 M 680 320 L 680 380 L 580 380 M 480 380 L 380 380" fill="none" stroke="#38bdf8" stroke-width="4" opacity="0"/>
+                        </g>
+
+                        <!-- BATTERY HOLDER (2x AA 3V) -->
+                        <g id="batteryHolder" transform="translate(200, 320)" class="cursor-pointer" onclick="triggerBatteryInfo()">
+                            <!-- Case -->
+                            <rect x="15" y="15" width="170" height="90" rx="12" fill="#1e293b" stroke="#475569" stroke-width="4"/>
+                            <!-- Battery 1 -->
+                            <rect x="25" y="25" width="150" height="30" rx="6" fill="#dc2626"/>
+                            <rect x="35" y="25" width="30" height="30" fill="#b91c1c"/>
+                            <rect x="165" y="32" width="8" height="16" rx="2" fill="#94a3b8"/>
+                            <text x="50" y="46" fill="#ffffff" font-weight="bold" font-size="13">AA 1.5V (+)</text>
+                            <!-- Battery 2 -->
+                            <rect x="25" y="60" width="150" height="30" rx="6" fill="#dc2626"/>
+                            <rect x="35" y="60" width="30" height="30" fill="#b91c1c"/>
+                            <rect x="165" y="67" width="8" height="16" rx="2" fill="#94a3b8"/>
+                            <text x="50" y="81" fill="#ffffff" font-weight="bold" font-size="13">AA 1.5V (+)</text>
+                            
+                            <text x="100" y="122" text-anchor="middle" font-family="Fredoka" font-size="14" font-weight="bold" fill="#64748b">2x AA Pil Yuvası (3V)</text>
+                            
+                            <!-- Heat Warning Effect for Short Circuit -->
+                            <g id="heatSmoke" class="hidden">
+                                <circle cx="50" cy="10" r="12" fill="#ef4444" opacity="0.6" class="animate-ping"/>
+                                <text x="100" y="-5" text-anchor="middle" font-weight="bold" fill="#ef4444" font-size="14">🔥 AŞIRI ISINMA!</text>
+                            </g>
+                        </g>
+
+                        <!-- SWITCH (AÇMA / KAPAMA ŞALTERİ) -->
+                        <g id="switchComponent" transform="translate(480, 340)" class="cursor-pointer" onclick="toggleSwitch()">
+                            <rect x="0" y="15" width="100" height="50" rx="10" fill="#e2e8f0" stroke="#94a3b8" stroke-width="3"/>
+                            <!-- Terminal contacts -->
+                            <circle cx="20" cy="40" r="7" fill="#64748b"/>
+                            <circle cx="80" cy="40" r="7" fill="#64748b"/>
+                            
+                            <!-- Lever Arm -->
+                            <line id="switchLever" x1="20" y1="40" x2="70" y2="10" stroke="#0f172a" stroke-width="8" stroke-linecap="round" class="transition-all duration-300"/>
+                            
+                            <text x="50" y="82" text-anchor="middle" font-family="Fredoka" font-size="14" font-weight="bold" fill="#64748b">Anahtar (Şalter)</text>
+                            <text id="switchStateLabel" x="50" y="-5" text-anchor="middle" font-family="Fredoka" font-size="12" font-weight="bold" fill="#ef4444">AÇIK (Devre Kopuk)</text>
+                        </g>
+
+                        <!-- TEST GAP / MATERIAL TEST SLOT -->
+                        <g id="testSlot" transform="translate(630, 240)">
+                            <rect x="25" y="10" width="50" height="80" rx="8" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="4 4"/>
+                            <!-- Clip Terminals -->
+                            <rect x="40" y="0" width="20" height="15" fill="#94a3b8" rx="3"/>
+                            <rect x="40" y="85" width="20" height="15" fill="#94a3b8" rx="3"/>
+
+                            <!-- Rendered Test Item inside Slot -->
+                            <g id="testSlotGraphic">
+                                <!-- Default Wire Bridge if no test item selected -->
+                                <line x1="50" y1="5" x2="50" y2="95" stroke="#2563eb" stroke-width="6"/>
+                            </g>
+
+                            <text x="50" y="118" text-anchor="middle" font-family="Fredoka" font-size="13" font-weight="bold" fill="#64748b" id="testSlotLabel">Doğrudan Bağlantı</text>
+                        </g>
+
+                        <!-- BUTTERFLY NIGHT LAMP BOTTLE & LED -->
+                        <g id="bottleContainer" transform="translate(500, 70)">
+                            <!-- Outer Jar Body (Plastic Bottle) -->
+                            <path d="M 40 30 Q 40 10 80 10 Q 120 10 120 30 L 130 50 C 150 70 150 180 140 210 C 130 230 30 230 20 210 C 10 180 10 70 30 50 Z" 
+                                  fill="rgba(255, 255, 255, 0.45)" stroke="#cbd5e1" stroke-width="3.5" id="bottleBody"/>
+                            
+                            <!-- Bottle Cap -->
+                            <rect x="65" y="0" width="30" height="14" rx="4" fill="#f43f5e"/>
+
+                            <!-- Butterfly Stickers on Bottle -->
+                            <g fill="#ec4899" opacity="0.75" id="butterflies">
+                                <!-- Butterfly 1 -->
+                                <path d="M 45 90 C 35 80 35 100 45 100 C 55 100 55 80 45 90 Z" />
+                                <path d="M 55 90 C 65 80 65 100 55 100 C 45 100 45 80 55 90 Z" />
+                                <!-- Butterfly 2 -->
+                                <path d="M 105 130 C 95 120 95 140 105 140 C 115 140 115 120 105 130 Z" />
+                                <path d="M 115 130 C 125 120 125 140 115 140 C 105 140 105 120 115 130 Z" />
+                                <!-- Butterfly 3 -->
+                                <path d="M 60 170 C 50 160 50 180 60 180 C 70 180 70 160 60 170 Z" />
+                                <path d="M 70 170 C 80 160 80 180 70 180 C 60 180 60 160 70 170 Z" />
+                            </g>
+
+                            <!-- Glow Aura (when lit) -->
+                            <circle id="bottleGlowCircle" cx="80" cy="130" r="75" fill="#fef08a" opacity="0" class="transition-opacity duration-500" filter="url(#strongGlow)"/>
+
+                            <!-- LED BULB INSIDE BOTTLE -->
+                            <g id="ledBulbGroup" transform="translate(60, 110)">
+                                <!-- LED Legs -->
+                                <line x1="0" y1="30" x2="0" y2="50" stroke="#94a3b8" stroke-width="4" id="legAnode"/>
+                                <line x1="40" y1="30" x2="40" y2="50" stroke="#94a3b8" stroke-width="4" id="legCathode"/>
+                                
+                                <!-- Leg Polarity Markers (+ / -) -->
+                                <text x="-12" y="45" font-size="14" font-weight="bold" fill="#ef4444" id="anodeLabel">+</text>
+                                <text x="46" y="45" font-size="14" font-weight="bold" fill="#3b82f6" id="cathodeLabel">-</text>
+
+                                <!-- LED Dome Glass -->
+                                <path d="M -5 30 L 45 30 L 45 15 C 45 -10 -5 -10 -5 15 Z" fill="#fde047" stroke="#eab308" stroke-width="2" opacity="0.8" id="ledDome"/>
+                                <!-- Inner Filament -->
+                                <path d="M 12 25 L 20 10 L 28 25" stroke="#ca8a04" stroke-width="2" fill="none"/>
+                            </g>
+
+                            <text x="80" y="248" text-anchor="middle" font-family="Fredoka" font-size="14" font-weight="bold" fill="#64748b">Kelebekli Gece Lambası</text>
+                        </g>
+                    </svg>
+                </div>
+
+                <!-- Bottom Helper Bar -->
+                <div class="mt-4 flex flex-wrap items-center justify-between text-xs font-semibold text-slate-500 gap-2 border-t border-slate-100 pt-3">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle text-red-500 text-[10px]"></i> Kırmızı Kablo: (+) Pozitif Akım</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle text-blue-500 text-[10px]"></i> Mavi Kablo: (-) Negatif Akım</span>
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-bolt text-amber-500"></i> Akım Voltajı: 3.0 Volt</span>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: INTERACTIVE CONTROLS -->
+            <div class="lg:col-span-4 flex flex-col gap-5">
+                
+                <!-- MAIN CONTROLS CARD -->
+                <div class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80 flex flex-col gap-4">
+                    <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <i class="fa-solid fa-sliders text-amber-500"></i> Devre Kontrol Paneli
+                    </h2>
+
+                    <!-- 1. Anahtar Butonu -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="font-fredoka font-bold text-sm block text-slate-700">1. Devre Anahtarı</span>
+                            <span class="text-xs text-slate-500">Elektrik akımını aç/kapat</span>
+                        </div>
+                        <button id="toggleSwitchBtn" onclick="toggleSwitch()" class="px-4 py-2.5 rounded-xl font-fredoka font-bold text-xs bg-red-500 text-white shadow-md hover:bg-red-600 active:scale-95 transition flex items-center gap-2">
+                            <i class="fa-solid fa-power-off"></i> Anahtar AÇIK
+                        </button>
+                    </div>
+
+                    <!-- 2. LED Kutup Yönü Değiştirme -->
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 flex items-center justify-between">
+                        <div>
+                            <span class="font-fredoka font-bold text-sm block text-slate-700">2. LED Kutup Yönü</span>
+                            <span class="text-xs text-slate-500" id="ledPolarityText">Doğru Bağlantı (+ / -)</span>
+                        </div>
+                        <button onclick="flipLED()" class="px-3.5 py-2 rounded-xl font-fredoka font-bold text-xs bg-indigo-50 text-indigo-600 border border-indigo-200 hover:bg-indigo-100 active:scale-95 transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i> Yönünü Çevir
+                        </button>
+                    </div>
+
+                    <!-- 3. Kısa Devre Deneyi -->
+                    <div class="bg-red-50 p-3.5 rounded-2xl border border-red-200 flex items-center justify-between">
+                        <div>
+                            <span class="font-fredoka font-bold text-sm block text-red-900">3. Kısa Devre Uyarısı</span>
+                            <span class="text-xs text-red-600">Pilin iki ucunu doğrudan bağla</span>
+                        </div>
+                        <button id="shortCircuitBtn" onclick="toggleShortCircuit()" class="px-3 py-2 rounded-xl font-fredoka font-bold text-xs bg-red-600 text-white hover:bg-red-700 active:scale-95 transition shadow-sm">
+                            Kısa Devre Et
+                        </button>
+                    </div>
+                </div>
+
+                <!-- MATERIAL TEST SELECTION PANEL (Shown when on Test Tab or Always Available) -->
+                <div id="testMaterialCard" class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80 flex flex-col gap-3">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <h2 class="font-fredoka text-lg font-bold text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-cubes text-blue-500"></i> Test Nesnesi Seç
+                        </h2>
+                        <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">3-4. Sınıf Seviyesi</span>
+                    </div>
+
+                    <p class="text-xs text-slate-500">Devredeki test boşluğuna bir nesne yerleştirerek elektriği geçirip geçirmediğini görün:</p>
+
+                    <div class="grid grid-cols-2 gap-2 mt-1">
+                        <!-- Direct Wire -->
+                        <button onclick="selectMaterial('wire')" id="mat-wire" class="mat-btn p-2.5 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-900 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left">
+                            <span class="text-base">⚡</span> Bakır Tel (İletken)
+                        </button>
+
+                        <!-- Metal Key -->
+                        <button onclick="selectMaterial('key')" id="mat-key" class="mat-btn p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left">
+                            <span class="text-base">🔑</span> Metal Anahtar
+                        </button>
+
+                        <!-- Plastic Spoon -->
+                        <button onclick="selectMaterial('spoon')" id="mat-spoon" class="mat-btn p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left">
+                            <span class="text-base">🥄</span> Plastik Kaşık
+                        </button>
+
+                        <!-- Eraser -->
+                        <button onclick="selectMaterial('eraser')" id="mat-eraser" class="mat-btn p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left">
+                            <span class="text-base">🧹</span> Kauçuk Silgi
+                        </button>
+
+                        <!-- Wood Stick -->
+                        <button onclick="selectMaterial('wood')" id="mat-wood" class="mat-btn p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left col-span-2">
+                            <span class="text-base">🪵</span> Tahta Çubuk (Yalıtkan)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PEDAGOGICAL TIPS BOX -->
+                <div class="bg-gradient-to-br from-amber-50 to-pink-50 rounded-3xl p-4 border border-amber-200/60 text-xs text-amber-950 flex gap-3 items-start">
+                    <span class="text-2xl shrink-0">👩‍🏫</span>
+                    <div>
+                        <h4 class="font-fredoka font-bold text-sm text-amber-900 mb-0.5">Kardelen Öğretmen'in Notu:</h4>
+                        <p class="leading-relaxed opacity-90">LED lambaların yönü vardır! Uzun bacak <strong>Anot (+)</strong>, kısa bacak <strong>Katot (-)</strong> tarafıdır. Yanlış bağlanırsa devre kapalı olsa bile ışık vermez.</p>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 3: INTERACTIVE QUIZ SECTION -->
+        <div id="quizSection" class="hidden max-w-3xl mx-auto w-full bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200">
+            
+            <!-- Quiz Header -->
+            <div class="text-center mb-6">
+                <span class="px-3 py-1 bg-amber-100 text-amber-800 rounded-full font-fredoka font-bold text-xs">Eğlenceli Öğrenme Testi</span>
+                <h2 class="font-fredoka text-2xl font-bold text-slate-800 mt-2">Neler Öğrendik? Kendini Test Et! 🌟</h2>
+                <p class="text-xs text-slate-500 mt-1">Soruları doğru cevaplayarak yıldızları topla!</p>
+            </div>
+
+            <!-- Quiz Container -->
+            <div id="quizContainer">
+                <!-- Question Card Dynamic -->
+                <div class="bg-slate-50 rounded-2xl p-5 border border-slate-200 mb-6">
+                    <div class="flex items-center justify-between text-xs font-bold text-slate-400 mb-2">
+                        <span id="quizProgressText">Soru 1 / 4</span>
+                        <div class="flex gap-1 text-amber-400 text-sm" id="quizStars">
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                            <i class="fa-solid fa-star"></i>
+                        </div>
+                    </div>
+
+                    <h3 id="questionText" class="font-fredoka text-lg font-bold text-slate-800 mb-4">
+                        Elektrik devresinde akımın geçmesine izin veren veya akımı kesen eleman hangisidir?
+                    </h3>
+
+                    <!-- Options Grid -->
+                    <div id="optionsContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <!-- Dynamic Buttons inserted by JS -->
+                    </div>
+                </div>
+
+                <!-- Quiz Feedback Toast -->
+                <div id="quizFeedback" class="hidden p-4 rounded-xl text-center font-fredoka text-sm font-bold mb-4"></div>
+
+                <!-- Next Button -->
+                <button id="nextQuestionBtn" onclick="nextQuestion()" class="hidden w-full py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-fredoka font-bold text-base shadow-md transition">
+                    Sonraki Soru <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <!-- Quiz Result View (Hidden initially) -->
+            <div id="quizResultView" class="hidden text-center py-8">
+                <div class="text-6xl mb-3">🎉</div>
+                <h3 class="font-fredoka text-2xl font-bold text-slate-800">Tebrikler! Testi Tamamladın!</h3>
+                <p id="quizScoreText" class="text-base text-slate-600 mt-2">4 sorudan 4 tanesini doğru yanıtladın!</p>
+                
+                <div class="flex justify-center gap-2 text-3xl text-amber-400 my-4" id="finalStars">
+                    ⭐⭐⭐⭐
+                </div>
+
+                <button onclick="resetQuiz()" class="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-fredoka font-bold rounded-xl shadow-lg active:scale-95 transition">
+                    <i class="fa-solid fa-rotate-right mr-2"></i> Testi Tekrar Çöz
+                </button>
+            </div>
+        </div>
+
+        <!-- TAB CONTENT 4: TEACHER GUIDE -->
+        <div id="teacherSection" class="hidden max-w-3xl mx-auto w-full bg-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-200">
+
+            <div class="border-b border-slate-100 pb-4 mb-6">
+                <h2 class="font-fredoka text-2xl font-bold text-blue-600 flex items-center gap-2">
+                    <span>👩‍🏫</span> Öğretmen Ders Planı &amp; Sunum Rehberi
+                </h2>
+                <p class="text-sm text-slate-500 mt-1">Basit Elektrik Devresi ve Kelebekli Gece Lambası Tasarımı (2-4. Sınıf)</p>
+            </div>
+
+            <h3 class="font-fredoka text-xl font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <span class="w-7 h-7 rounded-full bg-amber-400 text-white flex items-center justify-center text-sm"><i class="fa-solid fa-clock"></i></span>
+                40 Dakikalık Ders Akışı
+            </h3>
+
+            <div class="border-l-2 border-slate-200 ml-3 pl-6 flex flex-col gap-6">
+                <!-- Aşama 1 -->
+                <div>
+                    <p class="text-xs font-bold text-slate-400">1. Aşama (5 Dakika)</p>
+                    <h4 class="font-fredoka text-base font-bold text-slate-800 mt-1">Merak Uyandırma &amp; Tanışma</h4>
+                    <p class="text-sm text-slate-700 mt-1"><strong>Soru:</strong> <em>"Evimizde lambanın düğmesine basınca arkada ne oluyor? Elektrik nasıl seyahat eder?"</em></p>
+                    <p class="text-xs text-slate-500 mt-1">Pil, kablo, LED ve anahtarı tek tek çocuklara gösterip isimlerini söyletin.</p>
+                </div>
+                <!-- Aşama 2 -->
+                <div>
+                    <p class="text-xs font-bold text-slate-400">2. Aşama (5 Dakika)</p>
+                    <h4 class="font-fredoka text-base font-bold text-slate-800 mt-1">Temel Fikir: Devre Bir Çemberdir (Oyunla Öğrenme)</h4>
+                    <p class="text-sm text-slate-700 mt-1"><strong>Canlandırma Oyunu:</strong> Öğrencilerle el ele tutuşup bir halka olun. <em>"Herkes tutuştuğunda kapalı devre olduk, ışık yandı! Bir kişi elini bırakırsa anahtar açıldı, akım kesildi!"</em> deyin.</p>
+                </div>
+                <!-- Aşama 3 -->
+                <div>
+                    <p class="text-xs font-bold text-slate-400">3. Aşama (20 Dakika)</p>
+                    <h4 class="font-fredoka text-base font-bold text-slate-800 mt-1">Uygulama &amp; Fiziksel Kurulum</h4>
+                    <ul class="list-disc pl-5 mt-1 text-sm text-slate-700 flex flex-col gap-1">
+                        <li><strong>Adım 1:</strong> Önce sadece pil ve LED'i bağlatarak ışığı yaktırın.</li>
+                        <li><strong>Adım 2:</strong> Araya anahtarı ekletip kontrol sağlamalarını isteyin.</li>
+                        <li><strong>Sorun Giderme:</strong> Yanmayan devrede: LED yönünü çevirttirin, kablo temaslarını ve pillerin yönünü kontrol ettirin.</li>
+                    </ul>
+                </div>
+                <!-- Aşama 4 -->
+                <div>
+                    <p class="text-xs font-bold text-slate-400">4. Aşama (10 Dakika)</p>
+                    <h4 class="font-fredoka text-base font-bold text-slate-800 mt-1">Toparlama &amp; Gece Lambası Tasarımı</h4>
+                    <p class="text-sm text-slate-700 mt-1">Çalışan devreyi dikkatlice kelebekli şişenin içine yerleştirip odanın ışığını kapatarak gece lambası etkisini gözlemleyin.</p>
+                </div>
+            </div>
+
+            <!-- Örnek Öğretmen Replikleri -->
+            <div class="mt-8 rounded-2xl border border-slate-200 p-4">
+                <h4 class="font-fredoka text-base font-bold text-emerald-700 flex items-center gap-2 mb-2"><i class="fa-solid fa-comment-dots"></i> Örnek Öğretmen Replikleri</h4>
+                <p class="text-sm text-slate-700 italic mb-2">💬 "Çocuklar, LED lambalar 'tek yönlü sokak' gibidir. Elektrik sadece doğru kapıdan girerse ışık verir!"</p>
+                <p class="text-sm text-slate-700 italic">💬 "Plastik kaşık elektriğin geçmesine izin vermez (yalıtkan), ama metal ataş elektriğe izin verir (iletken)."</p>
+            </div>
+
+            <!-- Güvenlik ve İpuçları -->
+            <div class="mt-4 rounded-2xl border border-slate-200 p-4">
+                <h4 class="font-fredoka text-base font-bold text-red-600 flex items-center gap-2 mb-2"><i class="fa-solid fa-triangle-exclamation"></i> Güvenlik ve İpuçları</h4>
+                <p class="text-sm text-slate-700 mb-2">⚠️ <strong>Kısa Devre:</strong> Arada LED olmadan pilden çıkan kabloları birleştirmemeleri konusunda uyarın (ısınma riski).</p>
+                <p class="text-sm text-slate-700">💡 <strong>Yedek Malzeme:</strong> Dirençsiz bağlanan LED'ler 3V pil ile ısınabileceğinden yanınızda yedek LED bulundurun.</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 font-medium">
+            <p>2-4. Sınıf Fen Bilimleri Dersi İçin Özel Hazırlanmıştır • Kelebekli Gece Lambası Devre Simülasyonu 🦋⚡</p>
+        </div>
+    </footer>
+
+    <script>
+        /* STATE MANAGEMENT */
+        const state = {
+            switchClosed: false,       // false = Open circuit, true = Closed circuit
+            ledReversed: false,        // false = Correct (+/-), true = Reverse (-/+)
+            selectedMaterial: 'wire',  // 'wire', 'key', 'spoon', 'eraser', 'wood'
+            isShortCircuit: false,     // Short circuit mode
+            isDarkRoom: false,          // Oda ışığı modu
+            currentTab: 'lab',         // 'lab', 'test', 'quiz'
+            
+            // Quiz State
+            quizStep: 0,
+            score: 0,
+            answersChecked: false
+        };
+
+        // Material Conductivity map
+        const materials = {
+            wire: { name: 'Bakır Tel', conductive: true, type: 'İletken', icon: '⚡', color: '#2563eb' },
+            key: { name: 'Metal Anahtar', conductive: true, type: 'İletken', icon: '🔑', stroke: '#94a3b8' },
+            spoon: { name: 'Plastik Kaşık', conductive: false, type: 'Yalıtkan', icon: '🥄', stroke: '#f472b6' },
+            eraser: { name: 'Kauçuk Silgi', conductive: false, type: 'Yalıtkan', icon: '🧹', stroke: '#fb7185' },
+            wood: { name: 'Tahta Çubuk', conductive: false, type: 'Yalıtkan', icon: '🪵', stroke: '#b45309' }
+        };
+
+        // Quiz Questions Data
+        const questions = [
+            {
+                question: "1. Elektrik devresinde akımın geçmesini veya kesilmesini sağlayan eleman hangisidir?",
+                options: ["A) Pil", "B) Anahtar (Şalter)", "C) Kablo", "D) Cam Şişe"],
+                correct: 1,
+                explanation: "Doğru! Anahtar kapatıldığında devre tamamlanır ve elektrik akmaya başlar."
+            },
+            {
+                question: "2. LED lambanın yanması için uzun bacağı (+) pilin hangi tarafına bağlanmalıdır?",
+                options: ["A) Artı (+) kutbuna", "B) Eksi (-) kutbuna", "C) Fark etmez", "D) Şişenin kapağına"],
+                correct: 0,
+                explanation: "Tebrikler! LED bir diyottur. Uzun bacak (Anot) mutlaka pilin (+) tarafına bağlanmalıdır."
+            },
+            {
+                question: "3. Devredeki boşluğa plastik bir kaşık koyduğumuzda LED neden YANMAZ?",
+                options: ["A) Kaşık çok ağır olduğu için", "B) Plastik yalıtkan bir madde olduğu için", "C) Kaşık kırmızı olduğu için", "D) Pil bittiği için"],
+                correct: 1,
+                explanation: "Harika! Plastik, tahta ve kauçuk gibi maddeler yalıtkandır; elektriği geçirmezler."
+            },
+            {
+                question: "4. Pilin iki ucunu arada LED olmadan doğrudan tek bir kabloyla birleştirirsek ne olur?",
+                options: ["A) LED daha parlak yanar", "B) Kısa devre olur ve pil aşırı ısınır", "C) Hiçbir şey olmaz", "D) Gece lambası renk değiştirir"],
+                correct: 1,
+                explanation: "Çok iyi! Buna 'Kısa Devre' denir. Elektrik kestirmeden döndüğü için piller ısınabilir ve tehlikelidir!"
+            }
+        ];
+
+        /* AUDIO SYNTHESIZER FOR SOUND EFFECTS */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(type) {
+            try {
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(800, audioCtx.currentTime + 0.05);
+                    gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.05);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.05);
+                } else if (type === 'glow') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(523.25, audioCtx.currentTime + 0.2); // C5
+                    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } else if (type === 'warn') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, audioCtx.currentTime);
+                    osc.frequency.setValueAtTime(100, audioCtx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.25);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.25);
+                }
+            } catch (e) {
+                // Audio not supported or blocked
+            }
+        }
+
+        function updateCircuitVisuals() {
+            const isConductive = materials[state.selectedMaterial].conductive;
+            const lever = document.getElementById('switchLever');
+            const switchLabel = document.getElementById('switchStateLabel');
+            const electronPath = document.getElementById('electronPathMain');
+            const ledDome = document.getElementById('ledDome');
+            const bottleGlow = document.getElementById('bottleGlowCircle');
+            const ambientLight = document.getElementById('ambientLight');
+            const heatSmoke = document.getElementById('heatSmoke');
+            const batteryHolder = document.getElementById('batteryHolder');
+            const switchBtn = document.getElementById('toggleSwitchBtn');
+            const wireShort = document.getElementById('wireShort');
+
+            // 1. Switch Lever Position
+            if (state.switchClosed) {
+                lever.setAttribute('x2', '80');
+                lever.setAttribute('y2', '40');
+                switchLabel.textContent = 'KAPALI (Devre Tamam)';
+                switchLabel.setAttribute('fill', '#16a34a');
+                switchBtn.className = "px-4 py-2.5 rounded-xl font-fredoka font-bold text-xs bg-emerald-500 text-white shadow-md hover:bg-emerald-600 active:scale-95 transition flex items-center gap-2";
+                switchBtn.innerHTML = `<i class="fa-solid fa-check"></i> Anahtar KAPALI`;
+            } else {
+                lever.setAttribute('x2', '70');
+                lever.setAttribute('y2', '10');
+                switchLabel.textContent = 'AÇIK (Devre Kopuk)';
+                switchLabel.setAttribute('fill', '#ef4444');
+                switchBtn.className = "px-4 py-2.5 rounded-xl font-fredoka font-bold text-xs bg-red-500 text-white shadow-md hover:bg-red-600 active:scale-95 transition flex items-center gap-2";
+                switchBtn.innerHTML = `<i class="fa-solid fa-power-off"></i> Anahtar AÇIK`;
+            }
+
+            // 2. Short Circuit Mode Logic
+            if (state.isShortCircuit) {
+                wireShort.classList.remove('hidden');
+                heatSmoke.classList.remove('hidden');
+                batteryHolder.classList.add('short-circuit-shake');
+                electronPath.setAttribute('opacity', '1');
+                electronPath.classList.add('electron-flow');
+                ledDome.setAttribute('fill', '#94a3b8');
+                bottleGlow.setAttribute('opacity', '0');
+                ambientLight.setAttribute('opacity', '0');
+                
+                updateStatusBanner(
+                    '🔥 AŞIRI ISINMA! Kısa Devre!',
+                    'Elektrik LED lambaya ulaşmadan doğrudan pile geri dönüyor! Kablolar ve pil ısınabilir.',
+                    'danger'
+                );
+                return;
+            } else {
+                wireShort.classList.add('hidden');
+                heatSmoke.classList.add('hidden');
+                batteryHolder.classList.remove('short-circuit-shake');
+            }
+
+            // 3. Normal Circuit Logic Determination
+            const circuitComplete = state.switchClosed && isConductive;
+            const ledLightsUp = circuitComplete && !state.ledReversed;
+
+            // Electron animation visibility
+            if (circuitComplete) {
+                electronPath.setAttribute('opacity', '1');
+                electronPath.classList.add('electron-flow');
+            } else {
+                electronPath.setAttribute('opacity', '0');
+                electronPath.classList.remove('electron-flow');
+            }
+
+            // LED & Bottle Glow state
+            if (ledLightsUp) {
+                ledDome.setAttribute('fill', '#facc15');
+                ledDome.classList.add('led-glow-effect');
+                bottleGlow.setAttribute('opacity', state.isDarkRoom ? '1' : '0.7');
+                if (state.isDarkRoom) {
+                    ambientLight.setAttribute('opacity', '1');
+                }
+                
+                updateStatusBanner(
+                    '🎉 HARİKA! Gece Lambası Yandı!',
+                    `Devre kapalı, ${materials[state.selectedMaterial].name} elektriği iletiyor ve LED doğru yönde bağlı!`,
+                    'success'
+                );
+            } else {
+                ledDome.setAttribute('fill', '#94a3b8');
+                ledDome.classList.remove('led-glow-effect');
+                bottleGlow.setAttribute('opacity', '0');
+                ambientLight.setAttribute('opacity', '0');
+
+                // Determine Reason for Failure
+                if (!state.switchClosed) {
+                    updateStatusBanner(
+                        '❌ Devre Açık (Elektrik Akamıyor)',
+                        'Anahtar (şalter) açık olduğu için kablolar arasındaki elektrik köprüsü kopuk durumda.',
+                        'warning'
+                    );
+                } else if (!isConductive) {
+                    updateStatusBanner(
+                        `🚫 ${materials[state.selectedMaterial].name} Elektriği Geçirmiyor!`,
+                        `Seçtiğin nesne bir yalıtkandır. Elektrik akımının geçişini engeller.`,
+                        'warning'
+                    );
+                } else if (state.ledReversed) {
+                    updateStatusBanner(
+                        '⚠️ LED Yönü Ters Bağlandı!',
+                        'Elektrik devreden akıyor ancak LED ters takıldığı için ışık vermiyor. LED bacak yönünü çevirin!',
+                        'warning'
+                    );
+                }
+            }
+        }
+
+        function updateStatusBanner(title, desc, type) {
+            const banner = document.getElementById('statusBanner');
+            const icon = document.getElementById('statusIcon');
+            const titleEl = document.getElementById('statusTitle');
+            const descEl = document.getElementById('statusDesc');
+
+            titleEl.textContent = title;
+            descEl.textContent = desc;
+
+            if (type === 'success') {
+                banner.className = "p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-950 flex items-center gap-3 transition-all duration-300 mb-4 shadow-sm";
+                icon.className = "w-9 h-9 rounded-xl bg-emerald-200 flex items-center justify-center text-emerald-800 shrink-0 text-lg";
+                icon.innerHTML = `<i class="fa-solid fa-lightbulb"></i>`;
+            } else if (type === 'danger') {
+                banner.className = "p-3.5 rounded-2xl bg-red-100 border border-red-300 text-red-950 flex items-center gap-3 transition-all duration-300 mb-4 shadow-sm animate-pulse";
+                icon.className = "w-9 h-9 rounded-xl bg-red-200 flex items-center justify-center text-red-800 shrink-0 text-lg";
+                icon.innerHTML = `<i class="fa-solid fa-fire"></i>`;
+            } else {
+                banner.className = "p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 flex items-center gap-3 transition-all duration-300 mb-4 shadow-sm";
+                icon.className = "w-9 h-9 rounded-xl bg-amber-200 flex items-center justify-center text-amber-800 shrink-0 text-lg";
+                icon.innerHTML = `<i class="fa-solid fa-circle-info"></i>`;
+            }
+        }
+
+        /* INTERACTION HANDLERS */
+        function toggleSwitch() {
+            playSound('click');
+            state.isShortCircuit = false;
+            state.switchClosed = !state.switchClosed;
+            if (state.switchClosed && !state.ledReversed && materials[state.selectedMaterial].conductive) {
+                playSound('glow');
+            }
+            updateCircuitVisuals();
+        }
+
+        function flipLED() {
+            playSound('click');
+            state.ledReversed = !state.ledReversed;
+            
+            const anodeLabel = document.getElementById('anodeLabel');
+            const cathodeLabel = document.getElementById('cathodeLabel');
+            const polarityText = document.getElementById('ledPolarityText');
+
+            if (state.ledReversed) {
+                anodeLabel.textContent = "-";
+                anodeLabel.setAttribute('fill', '#3b82f6');
+                cathodeLabel.textContent = "+";
+                cathodeLabel.setAttribute('fill', '#ef4444');
+                polarityText.textContent = "Ters Bağlantı (- / +)";
+            } else {
+                anodeLabel.textContent = "+";
+                anodeLabel.setAttribute('fill', '#ef4444');
+                cathodeLabel.textContent = "-";
+                cathodeLabel.setAttribute('fill', '#3b82f6');
+                polarityText.textContent = "Doğru Bağlantı (+ / -)";
+            }
+
+            updateCircuitVisuals();
+        }
+
+        function toggleShortCircuit() {
+            playSound('warn');
+            state.isShortCircuit = !state.isShortCircuit;
+            const btn = document.getElementById('shortCircuitBtn');
+            if (state.isShortCircuit) {
+                btn.textContent = "Kısa Devreyi Çöz";
+                btn.className = "px-3 py-2 rounded-xl font-fredoka font-bold text-xs bg-slate-800 text-white hover:bg-slate-700 active:scale-95 transition shadow-sm";
+            } else {
+                btn.textContent = "Kısa Devre Et";
+                btn.className = "px-3 py-2 rounded-xl font-fredoka font-bold text-xs bg-red-600 text-white hover:bg-red-700 active:scale-95 transition shadow-sm";
+            }
+            updateCircuitVisuals();
+        }
+
+        function selectMaterial(matKey) {
+            playSound('click');
+            state.selectedMaterial = matKey;
+            state.isShortCircuit = false;
+
+            // Update UI buttons
+            document.querySelectorAll('.mat-btn').forEach(btn => {
+                btn.className = "mat-btn p-2.5 rounded-xl border border-slate-200 hover:border-amber-400 bg-slate-50 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left";
+            });
+
+            const activeBtn = document.getElementById(`mat-${matKey}`);
+            if (activeBtn) {
+                activeBtn.className = "mat-btn p-2.5 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-900 font-fredoka text-xs font-semibold flex items-center gap-2 transition text-left shadow-sm";
+            }
+
+            // Update SVG test slot representation
+            const slotGraphic = document.getElementById('testSlotGraphic');
+            const slotLabel = document.getElementById('testSlotLabel');
+            const item = materials[matKey];
+
+            slotLabel.textContent = `${item.name} (${item.type})`;
+
+            if (matKey === 'wire') {
+                slotGraphic.innerHTML = `<line x1="50" y1="5" x2="50" y2="95" stroke="#2563eb" stroke-width="6"/>`;
+            } else if (matKey === 'key') {
+                slotGraphic.innerHTML = `
+                    <circle cx="50" cy="25" r="14" fill="none" stroke="#64748b" stroke-width="6"/>
+                    <rect x="46" y="35" width="8" height="55" fill="#64748b" rx="2"/>
+                    <rect x="52" y="70" width="12" height="6" fill="#64748b"/>
+                    <rect x="52" y="82" width="10" height="6" fill="#64748b"/>
+                `;
+            } else if (matKey === 'spoon') {
+                slotGraphic.innerHTML = `
+                    <ellipse cx="50" cy="25" rx="12" ry="18" fill="#f472b6"/>
+                    <rect x="46" y="40" width="8" height="50" fill="#f472b6" rx="3"/>
+                `;
+            } else if (matKey === 'eraser') {
+                slotGraphic.innerHTML = `
+                    <rect x="35" y="20" width="30" height="60" rx="4" fill="#fb7185"/>
+                    <rect x="35" y="50" width="30" height="30" fill="#60a5fa" rx="2"/>
+                `;
+            } else if (matKey === 'wood') {
+                slotGraphic.innerHTML = `
+                    <rect x="44" y="10" width="12" height="80" fill="#b45309" rx="3"/>
+                `;
+            }
+
+            updateCircuitVisuals();
+        }
+
+        function toggleDarkRoom() {
+            playSound('click');
+            state.isDarkRoom = !state.isDarkRoom;
+            
+            const body = document.getElementById('appBody');
+            const topHeader = document.getElementById('topHeader');
+            const darkOverlay = document.getElementById('darkGlowOverlay');
+            const darkBtnText = document.getElementById('darkRoomText');
+            const darkBtnIcon = document.getElementById('darkRoomIcon');
+            const canvasCard = document.getElementById('circuitCanvasCard');
+            const svgContainer = document.getElementById('svgContainer');
+
+            if (state.isDarkRoom) {
+                body.className = "h-full bg-slate-950 text-slate-100 transition-colors duration-700 flex flex-col min-h-screen";
+                topHeader.className = "bg-slate-900/90 backdrop-blur border-b border-slate-800 sticky top-0 z-30 transition-colors duration-500 shadow-lg";
+                canvasCard.className = "lg:col-span-8 bg-slate-900 rounded-3xl p-4 md:p-6 shadow-2xl border border-slate-800 flex flex-col justify-between relative overflow-hidden transition-colors duration-500";
+                svgContainer.className = "relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-950 rounded-2xl border border-slate-800 flex items-center justify-center p-2 overflow-hidden transition-colors duration-700";
+                darkOverlay.classList.remove('opacity-0');
+                darkOverlay.classList.add('opacity-100');
+                
+                darkBtnText.textContent = "Oda Işığını Aç";
+                darkBtnIcon.className = "fa-solid font-bold text-yellow-400 fa-sun";
+            } else {
+                body.className = "h-full bg-slate-100 text-slate-800 transition-colors duration-700 flex flex-col min-h-screen";
+                topHeader.className = "bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30 transition-colors duration-500 shadow-sm";
+                canvasCard.className = "lg:col-span-8 bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80 flex flex-col justify-between relative overflow-hidden transition-colors duration-500";
+                svgContainer.className = "relative w-full aspect-[4/3] sm:aspect-[16/10] bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-center p-2 overflow-hidden transition-colors duration-700";
+                darkOverlay.classList.remove('opacity-100');
+                darkOverlay.classList.add('opacity-0');
+
+                darkBtnText.textContent = "Oda Işığını Kapat";
+                darkBtnIcon.className = "fa-solid font-bold text-amber-300 fa-moon";
+            }
+
+            updateCircuitVisuals();
+        }
+
+        function switchTab(tabName) {
+            playSound('click');
+            state.currentTab = tabName;
+
+            const simSection = document.getElementById('simSection');
+            const quizSection = document.getElementById('quizSection');
+            const teacherSection = document.getElementById('teacherSection');
+            const testCard = document.getElementById('testMaterialCard');
+            teacherSection.classList.add('hidden');
+
+            // Reset tab styles
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-transparent text-slate-600 hover:text-amber-600 hover:bg-white/50 transition";
+            });
+
+            const activeTabBtn = document.getElementById(`tab-${tabName}`);
+            activeTabBtn.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+            activeTabBtn.className = "tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 border-amber-500 bg-white text-amber-600 shadow-sm transition";
+
+            if (tabName === 'lab' || tabName === 'test') {
+                simSection.classList.remove('hidden');
+                quizSection.classList.add('hidden');
+
+                if (tabName === 'test') {
+                    testCard.classList.add('ring-4', 'ring-blue-400', 'animate-bounce-once');
+                    setTimeout(() => testCard.classList.remove('ring-4', 'ring-blue-400'), 1500);
+                }
+            } else if (tabName === 'quiz') {
+                simSection.classList.add('hidden');
+                quizSection.classList.remove('hidden');
+                loadQuestion();
+            } else if (tabName === 'teacher') {
+                simSection.classList.add('hidden');
+                quizSection.classList.add('hidden');
+                teacherSection.classList.remove('hidden');
+            }
+        }
+
+        function triggerBatteryInfo() {
+            playSound('click');
+            updateStatusBanner(
+                '🔋 Pil Yuvası Hakkında Bilgi',
+                'İki adet AA pil birleşerek 3.0 Volt elektrik enerjisi üretir. Artı (+) ve eksi (-) kutupları doğru bağlanmalıdır.',
+                'info'
+            );
+        }
+
+        function loadQuestion() {
+            state.answersChecked = false;
+            const q = questions[state.quizStep];
+            
+            document.getElementById('quizProgressText').textContent = `Soru ${state.quizStep + 1} / ${questions.length}`;
+            document.getElementById('questionText').textContent = q.question;
+            document.getElementById('quizFeedback').classList.add('hidden');
+            document.getElementById('nextQuestionBtn').classList.add('hidden');
+
+            const optionsContainer = document.getElementById('optionsContainer');
+            optionsContainer.innerHTML = '';
+
+            q.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "w-full p-3.5 rounded-xl border-2 border-slate-200 bg-white font-fredoka font-semibold text-sm text-left text-slate-700 hover:border-amber-400 hover:bg-amber-50/50 active:scale-95 transition shadow-sm";
+                btn.textContent = optText;
+                btn.onclick = () => checkAnswer(idx);
+                optionsContainer.appendChild(btn);
+            });
+        }
+
+        // Konfeti yüklenemese bile quiz akışı (geri bildirim + Sonraki Soru) bozulmasın
+        function safeConfetti(opts) {
+            try { if (typeof confetti === 'function') confetti(opts); } catch (e) {}
+        }
+
+        function checkAnswer(selectedIndex) {
+            if (state.answersChecked) return;
+            state.answersChecked = true;
+
+            const q = questions[state.quizStep];
+            const feedback = document.getElementById('quizFeedback');
+            const nextBtn = document.getElementById('nextQuestionBtn');
+            const options = document.getElementById('optionsContainer').children;
+
+            if (selectedIndex === q.correct) {
+                playSound('glow');
+                state.score++;
+                options[selectedIndex].className = "w-full p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 font-fredoka font-semibold text-sm text-left text-emerald-900 shadow-sm";
+                feedback.className = "p-4 rounded-xl text-center font-fredoka text-sm font-bold mb-4 bg-emerald-100 text-emerald-900 border border-emerald-300";
+                feedback.textContent = `🎉 DOĞRU! ${q.explanation}`;
+                safeConfetti({ particleCount: 40, spread: 60, origin: { y: 0.8 } });
+            } else {
+                playSound('warn');
+                options[selectedIndex].className = "w-full p-3.5 rounded-xl border-2 border-red-500 bg-red-50 font-fredoka font-semibold text-sm text-left text-red-900 shadow-sm";
+                options[q.correct].className = "w-full p-3.5 rounded-xl border-2 border-emerald-500 bg-emerald-50 font-fredoka font-semibold text-sm text-left text-emerald-900 shadow-sm";
+                feedback.className = "p-4 rounded-xl text-center font-fredoka text-sm font-bold mb-4 bg-red-100 text-red-900 border border-red-300";
+                feedback.textContent = `❌ YANLIŞ! ${q.explanation}`;
+            }
+
+            feedback.classList.remove('hidden');
+            nextBtn.classList.remove('hidden');
+        }
+
+        function nextQuestion() {
+            state.quizStep++;
+            if (state.quizStep < questions.length) {
+                loadQuestion();
+            } else {
+                showQuizResults();
+            }
+        }
+
+        function showQuizResults() {
+            document.getElementById('quizContainer').classList.add('hidden');
+            const resultView = document.getElementById('quizResultView');
+            resultView.classList.remove('hidden');
+
+            document.getElementById('quizScoreText').textContent = `${questions.length} sorudan ${state.score} tanesini doğru yanıtladın!`;
+            
+            let starsHTML = '';
+            for (let i = 0; i < questions.length; i++) {
+                if (i < state.score) {
+                    starsHTML += '⭐ ';
+                } else {
+                    starsHTML += '⚪ ';
+                }
+            }
+            document.getElementById('finalStars').textContent = starsHTML;
+
+            if (state.score === questions.length) {
+                safeConfetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            }
+        }
+
+        function resetQuiz() {
+            state.quizStep = 0;
+            state.score = 0;
+            document.getElementById('quizContainer').classList.remove('hidden');
+            document.getElementById('quizResultView').classList.add('hidden');
+            loadQuestion();
+        }
+
+        /* INITIALIZATION */
+        window.onload = function() {
+            loadQuestion();
+            updateCircuitVisuals();
+        };
+    </script>
+</body>
+</html>

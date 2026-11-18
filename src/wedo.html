@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WeDo 2.0 Simülasyonu</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        fredoka: ['Fredoka', 'sans-serif'],
+                        quicksand: ['Quicksand', 'sans-serif'],
+                    },
+                    colors: {
+                        labBg: '#f0f9ff',
+                        circuitDark: '#0f172a',
+                        electricYellow: '#facc15',
+                        electricBlue: '#38bdf8',
+                        warmAmber: '#fbbf24',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Quicksand', sans-serif; user-select: none; }
+        button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+        .tab-btn { white-space: nowrap; flex-shrink: 0; }
+        #tabNav { scrollbar-width: none; } #tabNav::-webkit-scrollbar { display: none; }
+        /* Şekil 7'deki gibi kırmızı etiket */
+        .tag-red { background: #e53935; color: #fff; font-family: 'Fredoka', sans-serif; font-weight: 700; border-radius: 6px; padding: 2px 8px; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+        /* Şekil 8'deki turuncu adım numarası */
+        .step-no { background: #f59e0b; color: #fff; font-family: 'Fredoka', sans-serif; font-weight: 700; border-radius: 6px; width: 2rem; height: 2rem; display: inline-flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+        .hint-ring { box-shadow: 0 0 0 4px #ef4444; animation: ring 1.2s ease-in-out infinite; }
+        @keyframes ring { 0%,100% { box-shadow: 0 0 0 3px rgba(239,68,68,.9); } 50% { box-shadow: 0 0 0 7px rgba(239,68,68,.35); } }
+        .shake { animation: shake .3s; }
+        @keyframes shake { 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+        .blk { width: 64px; height: 64px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; font-size: 22px; position: relative; box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), 0 2px 4px rgba(0,0,0,.15); flex-shrink: 0; }
+        .blk .val { position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); background: #fff; color: #1e293b; border: 2px solid currentColor; border-radius: 999px; font-size: 12px; font-weight: 700; padding: 0 7px; font-family: 'Fredoka', sans-serif; }
+        .blk.run { outline: 4px solid #facc15; outline-offset: 2px; }
+        .b-start { background: #f59e0b; } .b-motor { background: #2e7d32; } .b-look { background: #8e24aa; } .b-flow { background: #ef6c00; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex flex-col min-h-screen">
+
+    <header class="bg-white/80 backdrop-blur border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-400 to-lime-400 flex items-center justify-center text-white shadow-md text-xl">🧱</div>
+            <div>
+                <h1 class="font-fredoka text-xl md:text-2xl font-bold bg-gradient-to-r from-sky-600 via-emerald-600 to-lime-600 bg-clip-text text-transparent">WeDo 2.0 Laboratuvarı</h1>
+                <p class="text-xs text-slate-500 font-medium">Uygulamaya giriş • Parça kutusu • Proje kodlama</p>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-3 md:p-6 flex flex-col gap-5">
+        <div class="flex border-b border-slate-300 gap-2 overflow-x-auto pb-1" id="tabNav">
+            <button onclick="switchTab('intro')" id="tab-intro" class="tab-btn"><i class="fa-solid fa-tablet-screen-button"></i> 1. Uygulamaya Giriş</button>
+            <button onclick="switchTab('parts')" id="tab-parts" class="tab-btn"><i class="fa-solid fa-box-open"></i> 2. Parça Kutusu</button>
+            <button onclick="switchTab('code')" id="tab-code" class="tab-btn"><i class="fa-solid fa-puzzle-piece"></i> 3. Proje Kodlama</button>
+        </div>
+
+        <!-- 1. UYGULAMAYA GİRİŞ (Şekil 8) -->
+        <section id="sec-intro" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-8">
+                <div class="rounded-[2rem] bg-slate-800 p-3 md:p-4 shadow-2xl">
+                    <div id="tablet" class="relative rounded-2xl bg-white overflow-hidden aspect-[4/3]"></div>
+                </div>
+            </div>
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                <div class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80">
+                    <h2 class="font-fredoka text-lg font-bold mb-3 flex items-center gap-2"><i class="fa-solid fa-list-ol text-amber-500"></i> Giriş Adımları</h2>
+                    <ol id="introSteps" class="flex flex-col gap-2 text-sm"></ol>
+                    <button onclick="introReset()" class="mt-4 w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 font-fredoka font-bold text-sm text-slate-700 active:scale-95 transition"><i class="fa-solid fa-rotate-left"></i> Baştan Başla</button>
+                </div>
+                <div class="bg-gradient-to-br from-sky-50 to-lime-50 rounded-3xl p-4 border border-sky-200 text-xs text-sky-950 flex gap-3">
+                    <span class="text-2xl">👩‍🏫</span>
+                    <p class="leading-relaxed">Kırmızı halkalı yere dokun. Gerçek tablette de aynı sırayla ilerliyoruz. 1. hafta projeleri <strong>Snail</strong> (Salyangoz) ve <strong>Cooling Fan</strong> (Pervane).</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. PARÇA KUTUSU (Şekil 7) -->
+        <section id="sec-parts" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-8 bg-white rounded-3xl p-4 md:p-6 shadow-xl border border-slate-200/80">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                    <h2 class="font-fredoka text-lg font-bold">Bu parça hangi bölmeye?</h2>
+                    <span class="font-fredoka font-bold text-sm text-amber-600"><i class="fa-solid fa-star"></i> <span id="partScore">0</span> / <span id="partTotal">0</span></span>
+                </div>
+                <div class="flex items-center gap-4 rounded-2xl bg-slate-50 border border-slate-200 p-4 mb-4">
+                    <svg id="partPic" viewBox="0 0 120 80" class="w-28 h-20 shrink-0"></svg>
+                    <div><p class="text-xs font-bold text-slate-400">Elimdeki parça</p><p id="partName" class="font-fredoka text-2xl font-bold text-slate-800"></p><p id="partMsg" class="text-sm font-bold mt-1"></p></div>
+                </div>
+                <div id="tray" class="rounded-2xl bg-sky-700 p-3 grid grid-cols-2 sm:grid-cols-3 gap-2.5"></div>
+            </div>
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                <div class="bg-white rounded-3xl p-5 shadow-xl border border-slate-200/80">
+                    <h2 class="font-fredoka text-lg font-bold mb-3 flex items-center gap-2"><i class="fa-solid fa-clipboard-check text-emerald-500"></i> Ders Sonu Kontrolü</h2>
+                    <div id="rules" class="flex flex-col gap-2"></div>
+                </div>
+                <div class="bg-gradient-to-br from-amber-50 to-pink-50 rounded-3xl p-4 border border-amber-200 text-xs text-amber-950 flex gap-3">
+                    <span class="text-2xl">🧩</span>
+                    <p class="leading-relaxed">Parçan eksik mi? Sarı kare tuğla yerine mavi kare tuğla kullanabilirsin. İki kare tuğla bir dikdörtgen tuğla eder!</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 3. PROJE KODLAMA -->
+        <section id="sec-code" class="hidden flex flex-col gap-4">
+            <div id="projTabs" class="flex flex-wrap gap-2"></div>
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+                <div class="lg:col-span-7 bg-white rounded-3xl p-4 md:p-5 shadow-xl border border-slate-200/80 flex flex-col gap-3">
+                    <div class="flex items-center justify-between gap-2">
+                        <div><h2 id="projTitle" class="font-fredoka text-lg font-bold"></h2><p id="projDesc" class="text-xs text-slate-500"></p></div>
+                        <span id="projWeek" class="shrink-0 text-xs font-bold px-2.5 py-1 rounded-full bg-sky-100 text-sky-800"></span>
+                    </div>
+                    <div class="relative rounded-2xl bg-gradient-to-b from-sky-50 to-slate-100 border border-slate-200 overflow-hidden">
+                        <svg id="stage" viewBox="0 0 600 300" class="w-full h-auto block"></svg>
+                        <button id="sensorBtn" onclick="triggerSensor()" class="hidden absolute right-3 bottom-3 px-3 py-2 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-fredoka font-bold text-sm shadow-md active:scale-95 transition">✋ Elini yaklaştır</button>
+                    </div>
+                    <p id="runMsg" class="text-sm font-bold text-slate-600 min-h-[1.25rem]"></p>
+                </div>
+                <div class="lg:col-span-5 flex flex-col gap-4">
+                    <div class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200/80">
+                        <div class="flex items-center justify-between mb-2">
+                            <h3 class="font-fredoka font-bold">Kodum</h3>
+                            <div class="flex gap-2">
+                                <button onclick="loadExample()" class="px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200 font-fredoka font-bold text-xs active:scale-95">Örnek kod</button>
+                                <button onclick="clearProgram()" class="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 font-fredoka font-bold text-xs active:scale-95"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                        <div id="program" class="min-h-[96px] rounded-2xl bg-slate-50 border-2 border-dashed border-slate-200 p-3 pb-5 flex flex-wrap gap-x-2 gap-y-5 items-center"></div>
+                        <p class="text-[11px] text-slate-400 mt-2">Bloğa dokun: sayısını değiştir • Uzun bas ya da 🗑 ile sil</p>
+                        <div class="flex gap-2 mt-3">
+                            <button id="runBtn" onclick="runProgram()" class="flex-1 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-fredoka font-bold shadow-md active:scale-95 transition"><i class="fa-solid fa-play"></i> Çalıştır</button>
+                            <button onclick="stopProgram()" class="flex-1 py-3 rounded-xl bg-red-500 hover:bg-red-600 text-white font-fredoka font-bold shadow-md active:scale-95 transition"><i class="fa-solid fa-stop"></i> Durdur</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl p-4 shadow-xl border border-slate-200/80">
+                        <h3 class="font-fredoka font-bold mb-3">Bloklar <span class="text-xs font-semibold text-slate-400">(eklemek için dokun)</span></h3>
+                        <div id="palette" class="flex flex-wrap gap-x-2 gap-y-6 pb-3"></div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+        <p class="text-center text-xs text-slate-500 font-medium">Kodeksan Robotik Kodlama • WeDo 2.0 ders planına göre hazırlanmış alıştırma simülasyonudur, gerçek uygulamanın yerini tutmaz.</p>
+    </footer>
+
+    <script>
+        const START_MODE = '__SIM_MODE__';
+        const $ = id => document.getElementById(id);
+
+        /* ───────── SES ───────── */
+        let actx = null;
+        function tone(freqs, dur = 0.12, type = 'triangle', vol = 0.18) {
+            try {
+                actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+                if (actx.state === 'suspended') actx.resume();
+                freqs.forEach((f, i) => {
+                    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime + i * dur;
+                    o.type = type; o.frequency.setValueAtTime(f, t);
+                    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.01, t + dur);
+                    o.connect(g); g.connect(actx.destination); o.start(t); o.stop(t + dur);
+                });
+            } catch (e) {}
+        }
+        const sClick = () => tone([600], 0.05, 'sine', 0.12);
+        const good = () => tone([523, 659, 784], 0.1);
+        const bad = () => tone([180, 140], 0.12, 'sawtooth', 0.15);
+        const SOUNDS = { 1: [523, 659, 784, 1046], 2: [392, 330, 262], 3: [880, 440, 880, 440], 4: [300, 600, 300, 600, 900], 5: [660, 660, 880] };
+
+        function switchTab(name) {
+            sClick();
+            ['intro', 'parts', 'code'].forEach(n => {
+                $('sec-' + n).classList.toggle('hidden', n !== name);
+                $('tab-' + n).className = 'tab-btn px-5 py-2.5 rounded-t-xl font-fredoka font-semibold text-base flex items-center gap-2 border-b-4 transition ' +
+                    (n === name ? 'border-sky-500 bg-white text-sky-700 shadow-sm' : 'border-transparent text-slate-600 hover:text-sky-600 hover:bg-white/50');
+            });
+            if (name !== 'code') stopProgram(true);
+        }
+
+        /* ═════════ 1. UYGULAMAYA GİRİŞ ═════════ */
+        // Uygulama ikonu (Şekil 8, adım 1): beyaz kare üzerinde küçük robot + "WeDo 2.0"
+        const APP_ICON = `<svg viewBox="0 0 100 100" class="w-full h-full">
+            <rect x="4" y="4" width="92" height="92" rx="20" fill="#e0f2fe" stroke="#7dd3fc" stroke-width="3"/>
+            <rect x="22" y="40" width="44" height="26" rx="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+            <rect x="30" y="34" width="14" height="8" rx="2" fill="#cbd5e1"/>
+            <circle cx="70" cy="58" r="10" fill="#38bdf8" stroke="#0369a1" stroke-width="2"/><circle cx="70" cy="58" r="3" fill="#0f172a"/>
+            <rect x="60" y="26" width="5" height="18" rx="2" fill="#475569" transform="rotate(25 62 35)"/>
+            <rect x="20" y="66" width="56" height="8" rx="3" fill="#84cc16"/>
+            <rect x="16" y="76" width="18" height="10" rx="2" fill="#dc2626"/>
+            <rect x="36" y="78" width="40" height="6" rx="2" fill="#94a3b8"/>
+        </svg>`;
+        const INTRO_STEPS = [
+            [1, 'Uygulama ikonuna dokun'],
+            [2, 'GET STARTED görünene kadar oka bas'],
+            [3, 'GET STARTED’a dokun'],
+            [4, 'Classroom Projects’i seç'],
+            [5, 'Haftanın projesini seç'],
+            [6, 'Start building ile yapıma başla']
+        ];
+        const CAROUSEL = [
+            { t: 'Welcome to the LEGO® Education WeDo 2.0 introduction.', e: '🧑‍🤝‍🧑💻🧱' },
+            { t: 'Build with LEGO® bricks', e: '🧱🔧' },
+            { t: 'Program your model', e: '▶️🟩🟪' },
+            { t: 'Get started with four quick and easy activities.', e: '🐌 🌀 🛰️ 🕵️', go: true }
+        ];
+        const PROJECTS = {
+            snail:     { en: 'Snail', tr: 'Salyangoz', week: '1. Hafta', icon: '🐌', group: 'start' },
+            fan:       { en: 'Cooling Fan', tr: 'Pervane', week: '1. Hafta', icon: '🌀', group: 'start' },
+            satellite: { en: 'Moving Satellite', tr: 'Hareketli Uydu', week: '2. Hafta', icon: '🛰️', group: 'start' },
+            spy:       { en: 'Spy Robot', tr: 'Casus Robot', week: '2. Hafta', icon: '🕵️', group: 'start' },
+            speed:     { en: 'Speed', tr: 'Hız', week: '3. Hafta', icon: '🏎️', group: 'guided', no: 2 }
+        };
+        const intro = { step: 1, page: 0, proj: null, build: 0 };
+
+        function introReset() { sClick(); Object.assign(intro, { step: 1, page: 0, proj: null, build: 0 }); renderIntro(); }
+        function wrong(el) { bad(); const t = $('tablet'); t.classList.remove('shake'); void t.offsetWidth; t.classList.add('shake'); }
+        function introNext(n) { good(); intro.step = n; renderIntro(); }
+
+        function renderIntro() {
+            $('introSteps').innerHTML = INTRO_STEPS.map(([n, txt]) => {
+                const done = intro.step > n || (n === 6 && intro.build > 0), on = intro.step === n && !done;
+                return `<li class="flex items-center gap-2.5 p-2 rounded-xl ${on ? 'bg-amber-50 border border-amber-300' : ''}">
+                    <span class="step-no shrink-0" style="${done ? 'background:#10b981' : ''}">${done ? '✓' : n}</span>
+                    <span class="font-semibold ${done ? 'text-slate-400 line-through' : 'text-slate-700'}">${txt}</span></li>`;
+            }).join('');
+            const ring = n => intro.step === n ? 'hint-ring' : '';
+            let h = '';
+            if (intro.step === 1) {
+                // Tablet ana ekranı
+                const other = (ic, nm, col) => `<button onclick="wrong()" class="flex flex-col items-center gap-1"><span class="w-14 h-14 md:w-20 md:h-20 rounded-2xl ${col} flex items-center justify-center text-2xl md:text-3xl text-white shadow">${ic}</span><span class="text-[11px] md:text-xs text-white font-semibold">${nm}</span></button>`;
+                h = `<div class="absolute inset-0 bg-gradient-to-br from-indigo-500 via-sky-500 to-teal-400 p-6 md:p-10">
+                    <div class="grid grid-cols-4 gap-4 md:gap-8 justify-items-center">
+                        ${other('<i class="fa-solid fa-camera"></i>', 'Kamera', 'bg-slate-700')}
+                        ${other('<i class="fa-solid fa-images"></i>', 'Galeri', 'bg-pink-500')}
+                        <button onclick="introNext(2)" class="flex flex-col items-center gap-1"><span class="w-14 h-14 md:w-20 md:h-20 rounded-2xl bg-white shadow-lg block ${ring(1)}">${APP_ICON}</span><span class="text-[11px] md:text-xs text-white font-bold">WeDo 2.0</span></button>
+                        ${other('<i class="fa-solid fa-gear"></i>', 'Ayarlar', 'bg-slate-500')}
+                        ${other('<i class="fa-solid fa-calculator"></i>', 'Hesap', 'bg-orange-500')}
+                        ${other('<i class="fa-solid fa-music"></i>', 'Müzik', 'bg-rose-500')}
+                    </div></div>`;
+            } else if (intro.step === 2 || intro.step === 3) {
+                const p = CAROUSEL[intro.page];
+                h = `<div class="absolute inset-0 bg-gradient-to-b from-white to-slate-100 flex flex-col items-center justify-center text-center p-6">
+                    <p class="font-fredoka font-bold text-sky-500 text-lg md:text-3xl max-w-lg leading-tight">${p.t}</p>
+                    <div class="text-5xl md:text-7xl my-4 md:my-8">${p.e}</div>
+                    ${p.go ? `<button onclick="introNext(4)" class="px-8 py-2.5 rounded-full bg-sky-500 text-white font-bold text-sm md:text-base shadow ${ring(3)}">Get Started</button>` : ''}
+                    <div class="flex gap-1.5 mt-4">${CAROUSEL.map((_, i) => `<span class="w-2 h-2 rounded-full ${i === intro.page ? 'bg-sky-500' : 'bg-slate-300'}"></span>`).join('')}</div>
+                    ${p.go ? '' : `<button onclick="carNext()" class="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white text-slate-500 text-2xl shadow ${ring(2)}"><i class="fa-solid fa-chevron-right"></i></button>`}
+                </div>`;
+            } else if (intro.step === 4) {
+                h = `<div class="absolute inset-0 bg-slate-50 flex flex-col">
+                    <div class="flex-1 grid grid-cols-2 gap-3 p-4 md:p-6 items-center">
+                        <div class="text-center"><div class="text-5xl md:text-7xl">🤖</div><p class="text-xs text-slate-500 mt-2">New to WeDo 2.0</p>
+                            <button onclick="wrong()" class="mt-1 px-4 py-2 rounded-lg bg-green-600 text-white font-bold text-sm md:text-lg">Your first project</button></div>
+                        <div class="flex flex-col gap-2">
+                            <button onclick="wrong()" class="text-left rounded-xl bg-lime-500 text-white p-3"><b class="text-sm md:text-base">Teacher resources</b><br><span class="text-[10px]">Click here for useful tips and links</span></button>
+                            <button onclick="introNext(5)" class="text-left rounded-xl bg-blue-700 text-white p-3 ${ring(4)}"><b class="text-sm md:text-base">Classroom projects</b><br><span class="text-[10px]">Click here for engaging lessons</span></button>
+                        </div>
+                    </div>
+                    <div class="bg-lime-500 p-3"><p class="text-white text-xs font-bold mb-2">My projects</p>
+                        <div class="flex gap-2"><button onclick="wrong()" class="w-16 h-12 rounded bg-white text-green-600 text-2xl font-bold">+</button>${'<span class="w-16 h-12 rounded bg-white/90"></span>'.repeat(3)}</div></div>
+                </div>`;
+            } else if (intro.step === 5) {
+                const card = k => {
+                    const P = PROJECTS[k];
+                    return `<button onclick="pickProject('${k}')" class="relative rounded-xl bg-white border border-slate-200 p-2 text-left shadow-sm hover:shadow-md">
+                        <span class="text-[10px] md:text-xs font-semibold text-slate-600">${P.no ? P.no + '. ' : ''}${P.en}</span>
+                        <div class="text-3xl md:text-4xl text-center my-1">${P.icon}</div>
+                        <span class="text-[10px] font-bold text-sky-700">${P.week}</span>
+                        ${P.week === '1. Hafta' ? '<span class="absolute right-2 bottom-1 text-red-500 text-2xl font-bold">✓</span>' : ''}</button>`;
+                };
+                const dummy = n => `<button onclick="wrong()" class="rounded-xl bg-white border border-slate-200 p-2 text-left opacity-70"><span class="text-[10px] md:text-xs font-semibold text-slate-500">${n}</span><div class="text-3xl text-center my-1">🧱</div></button>`;
+                h = `<div class="absolute inset-0 bg-slate-100 p-3 md:p-4 overflow-y-auto">
+                    <p class="font-fredoka font-bold text-slate-700 text-sm mb-2">Getting Started</p>
+                    <div class="grid grid-cols-3 md:grid-cols-4 gap-2 ${ring(5)} rounded-xl">${['snail', 'fan', 'satellite', 'spy'].map(card).join('')}${dummy('A. Milo the Science Rover')}${dummy('B. Milo’s Motion Sensor')}</div>
+                    <p class="font-fredoka font-bold text-slate-700 text-sm mt-3 mb-2">Guided Projects – Science</p>
+                    <div class="grid grid-cols-3 md:grid-cols-4 gap-2">${dummy('1. Pulling')}${card('speed')}${dummy('3. Robust Structures')}</div>
+                </div>`;
+            } else if (intro.step === 6) {
+                const P = PROJECTS[intro.proj];
+                if (!intro.build) {
+                    h = `<div class="absolute inset-0 bg-white flex flex-col p-4 md:p-6">
+                        <div class="flex gap-3 text-slate-400 text-lg border-b pb-2"><i class="fa-solid fa-house"></i><i class="fa-solid fa-table-cells-large"></i><i class="fa-solid fa-lightbulb"></i><i class="fa-solid fa-camera"></i><i class="fa-solid fa-pen"></i></div>
+                        <p class="text-slate-600 text-sm md:text-base mt-3">Use the LEGO bricks to build your model. Are you ready?</p>
+                        <p class="font-fredoka font-bold text-lg md:text-2xl text-slate-800">${P.icon} ${P.en} <span class="text-sm text-slate-400">(${P.tr})</span></p>
+                        <div class="flex-1 flex items-center justify-center"><button onclick="startBuild()" class="px-8 py-3 rounded-full bg-sky-500 text-white font-bold md:text-lg shadow ${ring(6)}">Start building</button></div>
+                    </div>`;
+                } else {
+                    const parts = { snail: ['Beyin', 'Motor', 'Kavisli', 'Süs (göz)'], fan: ['Beyin', 'Motor', 'Aks', 'Pervane'], satellite: ['Beyin', 'Motor', 'Kiriş', 'Çanak'], spy: ['Beyin', 'Hareket sensörü', 'Tuğla', 'Süs'], speed: ['Beyin', 'Motor', 'Aks', 'Jant ve tekerlekler'] }[intro.proj];
+                    const done = intro.build > parts.length;
+                    h = `<div class="absolute inset-0 bg-white flex flex-col items-center justify-center p-4 text-center">
+                        <p class="font-fredoka font-bold text-lg md:text-2xl">${P.icon} ${P.tr} yapımı</p>
+                        <div class="flex flex-wrap justify-center gap-2 my-4">${parts.map((p, i) => `<span class="tag-red ${i < intro.build ? '' : 'opacity-25'}">${i + 1}. ${p}</span>`).join('')}</div>
+                        ${done ? `<p class="text-emerald-600 font-bold mb-3">Model hazır! Şimdi kodlayalım.</p><button onclick="gotoCode('${intro.proj}')" class="px-6 py-3 rounded-xl bg-emerald-500 text-white font-fredoka font-bold shadow">Kodlamaya geç <i class="fa-solid fa-arrow-right"></i></button>`
+                               : `<button onclick="buildStep()" class="px-6 py-3 rounded-xl bg-sky-500 text-white font-fredoka font-bold shadow hint-ring">Sonraki parça <i class="fa-solid fa-plus"></i></button>`}
+                    </div>`;
+                }
+            }
+            $('tablet').innerHTML = h;
+        }
+        function carNext() { sClick(); intro.page++; if (CAROUSEL[intro.page].go) intro.step = 3; renderIntro(); }
+        function pickProject(k) { intro.proj = k; introNext(6); }
+        function startBuild() { good(); intro.build = 1; renderIntro(); }
+        function buildStep() { sClick(); intro.build++; renderIntro(); }
+        function gotoCode(k) { switchTab('code'); selectProject(k); }
+
+        /* ═════════ 2. PARÇA KUTUSU ═════════ */
+        const BINS = [
+            ['klips', 'Delikli ve klipsli tuğla'], ['disli', 'Kasnak ve dişli çarklar'], ['sus', 'Süs'],
+            ['plaka', 'Plaka'], ['baglanti', 'Bağlantı elemanları'], ['aks', 'Aks'],
+            ['tugla', 'Tuğla'], ['kiris', 'Kiriş'], ['kavisli', 'Kavisliler'],
+            ['elek', 'Beyin, motor ve sensörler'], ['teker', 'Jant ve tekerlekler'], ['sokucu', 'Lego sökücü']
+        ];
+        const studs = (x, y, n, c) => Array.from({ length: n }, (_, i) => `<rect x="${x + i * 18}" y="${y}" width="12" height="6" rx="2" fill="${c}"/>`).join('');
+        const PARTS = [
+            ['Tuğla', 'tugla', `<rect x="22" y="30" width="76" height="34" rx="3" fill="#f59e0b"/>${studs(26, 24, 4, '#d97706')}`],
+            ['Mavi kare tuğla', 'tugla', `<rect x="40" y="30" width="40" height="34" rx="3" fill="#38bdf8"/>${studs(44, 24, 2, '#0284c7')}`],
+            ['Plaka', 'plaka', `<rect x="14" y="40" width="92" height="12" rx="2" fill="#84cc16"/>${studs(18, 34, 5, '#65a30d')}`],
+            ['Kiriş', 'kiris', `<rect x="10" y="32" width="100" height="18" rx="9" fill="#a3e635"/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${22 + i * 19}" cy="41" r="5" fill="#fff"/>`).join('')}`],
+            ['Aks', 'aks', `<rect x="10" y="37" width="100" height="7" rx="2" fill="#1f2937"/><rect x="10" y="39" width="100" height="2" fill="#4b5563"/>`],
+            ['Dişli çark', 'disli', `<g transform="translate(60 40)">${Array.from({ length: 12 }, (_, i) => `<rect x="-4" y="-30" width="8" height="10" fill="#6b7280" transform="rotate(${i * 30})"/>`).join('')}<circle r="22" fill="#6b7280"/><circle r="5" fill="#fff"/></g>`],
+            ['Kasnak', 'disli', `<circle cx="60" cy="40" r="24" fill="#2dd4bf"/><circle cx="60" cy="40" r="16" fill="#14b8a6"/><circle cx="60" cy="40" r="4" fill="#fff"/>`],
+            ['Bağlantı pimi', 'baglanti', `<rect x="30" y="34" width="60" height="12" rx="6" fill="#1f2937"/><rect x="56" y="30" width="8" height="20" rx="2" fill="#374151"/>`],
+            ['Klipsli tuğla', 'klips', `<rect x="26" y="30" width="68" height="30" rx="3" fill="#9ca3af"/><circle cx="60" cy="45" r="7" fill="#fff"/>${studs(30, 24, 4, '#6b7280')}<rect x="94" y="38" width="10" height="14" rx="3" fill="#6b7280"/>`],
+            ['Kavisli parça', 'kavisli', `<path d="M20 64 L100 64 L100 56 Q60 20 20 30 Z" fill="#22d3ee"/>`],
+            ['Göz (süs)', 'sus', `<circle cx="60" cy="40" r="22" fill="#fff" stroke="#111827" stroke-width="3"/><circle cx="64" cy="42" r="9" fill="#111827"/>`],
+            ['Çiçek (süs)', 'sus', `${[0, 72, 144, 216, 288].map(a => `<circle cx="60" cy="22" r="10" fill="#f472b6" transform="rotate(${a} 60 40)"/>`).join('')}<circle cx="60" cy="40" r="8" fill="#facc15"/>`],
+            ['Beyin', 'elek', `<rect x="28" y="12" width="64" height="58" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/><rect x="50" y="18" width="20" height="14" rx="3" fill="#10b981"/>${[0, 1, 2].map(r => [0, 1, 2].map(c => `<circle cx="${42 + c * 18}" cy="${42 + r * 10}" r="3" fill="#cbd5e1"/>`).join('')).join('')}`],
+            ['Motor', 'elek', `<rect x="22" y="24" width="70" height="34" rx="6" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/><circle cx="38" cy="41" r="9" fill="#9ca3af"/><path d="M33 41h10M38 36v10" stroke="#dc2626" stroke-width="3"/><path d="M92 41 Q108 41 108 64" stroke="#111827" stroke-width="3" fill="none"/>`],
+            ['Hareket sensörü', 'elek', `<rect x="34" y="22" width="52" height="38" rx="6" fill="#f8fafc" stroke="#9ca3af" stroke-width="2"/><circle cx="50" cy="41" r="7" fill="#1f2937"/><circle cx="70" cy="41" r="7" fill="#1f2937"/>`],
+            ['Tekerlek', 'teker', `<circle cx="60" cy="40" r="28" fill="#111827"/><circle cx="60" cy="40" r="15" fill="#f1f5f9"/><circle cx="60" cy="40" r="4" fill="#9ca3af"/>`],
+            ['Lego sökücü', 'sokucu', `<rect x="12" y="30" width="96" height="20" rx="6" fill="#f97316"/><rect x="22" y="36" width="56" height="8" rx="3" fill="#ea580c"/>`]
+        ];
+        const parts = { cur: null, score: 0, total: 0, locked: false };
+        function nextPart() {
+            let p; do { p = PARTS[Math.floor(Math.random() * PARTS.length)]; } while (PARTS.length > 1 && p === parts.cur);
+            parts.cur = p; parts.locked = false;
+            $('partName').textContent = p[0];
+            $('partPic').innerHTML = p[2];
+            $('partMsg').textContent = '';
+        }
+        function dropPart(bin) {
+            if (parts.locked) return;
+            const ok = parts.cur[1] === bin;
+            parts.total++;
+            if (ok) { parts.score++; good(); parts.locked = true; $('partMsg').className = 'text-sm font-bold mt-1 text-emerald-600'; $('partMsg').textContent = '✅ Doğru bölme! Aferin.'; setTimeout(nextPart, 900); }
+            else { bad(); $('partMsg').className = 'text-sm font-bold mt-1 text-red-600'; $('partMsg').textContent = '❌ Bölmedeki etikete tekrar bak.'; }
+            $('partScore').textContent = parts.score; $('partTotal').textContent = parts.total;
+        }
+        function renderTray() {
+            $('tray').innerHTML = BINS.map(([k, label]) => `<button onclick="dropPart('${k}')" class="min-h-[64px] rounded-xl bg-slate-100 hover:bg-white border-2 border-slate-300 hover:border-amber-400 active:scale-95 transition flex items-center justify-center p-2"><span class="tag-red text-xs md:text-sm text-center">${label}</span></button>`).join('');
+        }
+        const RULES = [
+            'Her parçayı kendi kutucuğuna koydum',
+            'Öğretmenden habersiz parça alışverişi yapmadım',
+            'Motor ve sensörü kablosundan değil, ucundan çektim',
+            'Beyni kapattım'
+        ];
+        const rulesDone = {};
+        function toggleRule(i) {
+            rulesDone[i] = !rulesDone[i]; sClick(); renderRules();
+            if (RULES.every((_, j) => rulesDone[j])) good();
+        }
+        function renderRules() {
+            $('rules').innerHTML = RULES.map((r, i) => `<button onclick="toggleRule(${i})" class="flex items-center gap-2.5 p-2.5 rounded-xl border text-left text-sm font-semibold transition active:scale-95 ${rulesDone[i] ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-slate-50 border-slate-200 text-slate-700'}">
+                <span class="w-6 h-6 rounded-md shrink-0 flex items-center justify-center ${rulesDone[i] ? 'bg-emerald-500 text-white' : 'bg-white border-2 border-slate-300'}">${rulesDone[i] ? '✓' : ''}</span>${r}</button>`).join('') +
+                (RULES.every((_, i) => rulesDone[i]) ? '<p class="text-center font-fredoka font-bold text-emerald-600 mt-1">🎉 Kutun teslime hazır!</p>' : '');
+        }
+
+        /* ═════════ 3. PROJE KODLAMA ═════════ */
+        const BLOCKS = {
+            start:   { c: 'b-start', i: 'fa-play', n: 'Başla' },
+            cw:      { c: 'b-motor', i: 'fa-rotate-right', n: 'Motor bu yöne' },
+            ccw:     { c: 'b-motor', i: 'fa-rotate-left', n: 'Motor öbür yöne' },
+            power:   { c: 'b-motor', i: 'fa-gauge-high', n: 'Motor gücü', v: 8, min: 0, max: 10 },
+            motorFor:{ c: 'b-motor', i: 'fa-stopwatch', n: 'Motoru süreyle çalıştır', v: 2, min: 1, max: 10 },
+            on:      { c: 'b-motor', i: 'fa-power-off', n: 'Motoru çalıştır' },
+            off:     { c: 'b-motor', i: 'fa-ban', n: 'Motoru durdur' },
+            light:   { c: 'b-look', i: 'fa-lightbulb', n: 'Işık rengi', v: 9, min: 0, max: 10 },
+            sound:   { c: 'b-look', i: 'fa-volume-high', n: 'Ses çal', v: 1, min: 1, max: 5 },
+            wait:    { c: 'b-flow', i: 'fa-hourglass-half', n: 'Bekle (saniye)', v: 1, min: 1, max: 10 },
+            sensor:  { c: 'b-flow', i: 'fa-hand', n: 'Hareket sensörünü bekle' },
+            loop:    { c: 'b-flow', i: 'fa-repeat', n: 'Baştan tekrarla' }
+        };
+        const LIGHTS = ['#111827', '#f472b6', '#a855f7', '#3b82f6', '#06b6d4', '#14b8a6', '#22c55e', '#facc15', '#f97316', '#ef4444', '#ffffff'];
+        const EXAMPLES = {
+            snail:     [['light', 9], ['cw'], ['power', 3], ['on'], ['wait', 2], ['light', 6], ['sound', 1], ['wait', 2], ['off']],
+            fan:       [['cw'], ['power', 10], ['motorFor', 3], ['power', 4], ['motorFor', 3], ['sound', 5]],
+            satellite: [['light', 4], ['ccw'], ['power', 5], ['motorFor', 4], ['sound', 2], ['loop']],
+            spy:       [['light', 0], ['sensor'], ['light', 9], ['sound', 3], ['wait', 1], ['light', 0], ['loop']],
+            speed:     [['cw'], ['power', 10], ['on']]
+        };
+        const DESCS = {
+            snail: 'Salyangoz ilerlesin, beynin ışığı renk değiştirsin. Farklı renk ve ses kodlarını dene!',
+            fan: 'Pervaneyi döndür. Motor gücünü değiştirince ne oluyor?',
+            satellite: 'Uydu çanağı dönsün. Ne kadar süre döneceğini kodla belirle.',
+            spy: 'Biri yaklaşınca casus robot ses ve ışıkla haber versin. “Elini yaklaştır” düğmesine bas.',
+            speed: 'Arabanı yarıştır! Rakip araba motor gücü 5 ile gidiyor. Onu geçebilir misin?'
+        };
+        const code = { proj: 'snail', prog: [], running: false, token: 0, pc: -1,
+                       motor: { on: false, dir: 1, power: 8 }, light: 3, angle: 0, x: 60, rival: 60, sensorHit: false, raceOn: false, finished: false };
+
+        function renderPalette() {
+            $('palette').innerHTML = Object.entries(BLOCKS).filter(([k]) => k !== 'start').map(([k, b]) =>
+                `<button title="${b.n}" onclick="addBlock('${k}')" class="blk ${b.c} active:scale-90 transition"><i class="fa-solid ${b.i}"></i>${b.v !== undefined ? `<span class="val">${b.v}</span>` : ''}</button>`).join('');
+        }
+        function renderProgram() {
+            const blk = (k, v, i) => {
+                const b = BLOCKS[k];
+                const style = k === 'light' ? `style="color:${LIGHTS[v] === '#ffffff' ? '#64748b' : LIGHTS[v]}"` : '';
+                return `<button title="${b.n}" ${i >= 0 ? `onclick="bumpBlock(${i})" oncontextmenu="event.preventDefault();delBlock(${i})"` : ''} class="blk ${b.c} ${code.pc === i ? 'run' : ''}"><i class="fa-solid ${b.i}"></i>${v !== undefined ? `<span class="val" ${style}>${v}</span>` : ''}</button>` +
+                       (i >= 0 ? `<button onclick="delBlock(${i})" class="-ml-1 w-5 h-5 rounded-full bg-slate-200 text-slate-500 text-[10px] self-start" aria-label="Sil">✕</button>` : '');
+            };
+            $('program').innerHTML = blk('start', undefined, -2) + code.prog.map((p, i) => blk(p.k, p.v, i)).join('');
+        }
+        function addBlock(k) { sClick(); code.prog.push({ k, v: BLOCKS[k].v }); renderProgram(); }
+        function delBlock(i) { sClick(); code.prog.splice(i, 1); renderProgram(); }
+        function bumpBlock(i) {
+            const p = code.prog[i], b = BLOCKS[p.k];
+            if (p.v === undefined) return;
+            sClick(); p.v = p.v >= b.max ? b.min : p.v + 1; renderProgram();
+        }
+        function clearProgram() { stopProgram(true); code.prog = []; renderProgram(); }
+        function loadExample() { stopProgram(true); sClick(); code.prog = EXAMPLES[code.proj].map(([k, v]) => ({ k, v })); renderProgram(); }
+
+        function selectProject(k) {
+            stopProgram(true);
+            code.proj = k; code.prog = []; code.x = 60; code.rival = 60; code.angle = 0; code.light = 3; code.finished = false;
+            const P = PROJECTS[k];
+            $('projTitle').textContent = `${P.icon} ${P.tr} (${P.en})`;
+            $('projDesc').textContent = DESCS[k];
+            $('projWeek').textContent = P.week;
+            $('sensorBtn').classList.toggle('hidden', k !== 'spy');
+            $('projTabs').innerHTML = Object.entries(PROJECTS).map(([pk, p]) => `<button onclick="sClick();selectProject('${pk}')" class="px-4 py-2 rounded-xl font-fredoka font-bold text-sm shadow-sm active:scale-95 transition border ${pk === k ? 'bg-sky-500 text-white border-sky-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-sky-50'}">${p.icon} ${p.tr} <span class="text-[10px] opacity-75">${p.week}</span></button>`).join('');
+            $('runMsg').textContent = 'Blokları ekle ve ▶ Çalıştır’a bas. Takılırsan “Örnek kod”.';
+            renderProgram(); drawStage();
+        }
+
+        const sleep = (ms, tok) => new Promise(res => {
+            const end = performance.now() + ms;
+            (function tick() { if (tok !== code.token || performance.now() >= end) res(); else setTimeout(tick, 30); })();
+        });
+        async function runProgram() {
+            stopProgram(true);
+            if (!code.prog.length) { bad(); $('runMsg').textContent = 'Önce blok ekle!'; return; }
+            const tok = ++code.token;
+            code.running = true; code.sensorHit = false;
+            if (code.proj === 'speed') { code.x = 60; code.rival = 60; code.raceOn = true; code.finished = false; }
+            $('runMsg').textContent = '▶ Kod çalışıyor…';
+            let i = 0, steps = 0;
+            while (tok === code.token && i < code.prog.length) {
+                const p = code.prog[i]; code.pc = i; renderProgram();
+                switch (p.k) {
+                    case 'cw': code.motor.dir = 1; break;
+                    case 'ccw': code.motor.dir = -1; break;
+                    case 'power': code.motor.power = p.v; break;
+                    case 'on': code.motor.on = true; break;
+                    case 'off': code.motor.on = false; break;
+                    case 'motorFor': code.motor.on = true; await sleep(p.v * 1000, tok); code.motor.on = false; break;
+                    case 'light': code.light = p.v; break;
+                    case 'sound': tone(SOUNDS[p.v], 0.13); await sleep(SOUNDS[p.v].length * 130, tok); break;
+                    case 'wait': await sleep(p.v * 1000, tok); break;
+                    case 'sensor': $('runMsg').textContent = '👀 Sensör bekliyor… “Elini yaklaştır”a bas.'; code.sensorHit = false;
+                        while (tok === code.token && !code.sensorHit) await sleep(60, tok);
+                        $('runMsg').textContent = '🚨 Biri yaklaştı!'; break;
+                    case 'loop': i = -1; break;
+                }
+                i++; steps++;
+                await sleep(steps % 20 === 0 ? 120 : 40, tok); // sonsuz döngüde bile tarayıcı donmasın
+            }
+            if (tok === code.token) { code.running = false; code.pc = -1; renderProgram(); if (!code.motor.on) $('runMsg').textContent = '✅ Kod bitti.'; else $('runMsg').textContent = '✅ Kod bitti, motor hâlâ çalışıyor. Durdurmak için ⏹.'; }
+        }
+        function stopProgram(silent) {
+            code.token++; code.running = false; code.pc = -1; code.motor.on = false; code.raceOn = false;
+            if (!silent) { sClick(); $('runMsg').textContent = '⏹ Durduruldu.'; }
+            if ($('program')) renderProgram();
+        }
+        function triggerSensor() { code.sensorHit = true; tone([900], 0.06, 'square', 0.08); }
+
+        /* Sahne çizimi: her projenin modeli + akıllı beyin (ışığı ile) */
+        function hub(x, y) {
+            const c = LIGHTS[code.light];
+            return `<g transform="translate(${x} ${y})"><rect width="70" height="54" rx="8" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+                <rect x="24" y="6" width="22" height="14" rx="3" fill="${c}" stroke="#64748b"/>${code.light ? `<circle cx="35" cy="13" r="16" fill="${c}" opacity=".35"/>` : ''}
+                ${[0, 1, 2].map(r => [0, 1, 2, 3].map(q => `<circle cx="${14 + q * 14}" cy="${28 + r * 8}" r="2.5" fill="#cbd5e1"/>`).join('')).join('')}</g>`;
+        }
+        function drawStage() {
+            const a = code.angle, k = code.proj;
+            let s = `<rect width="600" height="300" fill="transparent"/>`;
+            if (k === 'snail') {
+                s += `<rect x="0" y="232" width="600" height="68" fill="#bbf7d0"/>
+                    <g transform="translate(${code.x} 150)">
+                        <path d="M0 80 Q-10 60 20 58 L150 58 Q175 60 180 80 Z" fill="#a3e635" stroke="#4d7c0f" stroke-width="3"/>
+                        <line x1="160" y1="60" x2="172" y2="22" stroke="#4d7c0f" stroke-width="4"/><circle cx="172" cy="20" r="7" fill="#fff" stroke="#111827" stroke-width="2"/><circle cx="174" cy="20" r="3" fill="#111827"/>
+                        <circle cx="78" cy="18" r="46" fill="#fbbf24" stroke="#b45309" stroke-width="4"/><path d="M78 18 m-6 0 a6 6 0 1 1 12 0 a12 12 0 1 1 -24 0 a20 20 0 1 1 40 0 a28 28 0 1 1 -56 0" fill="none" stroke="#b45309" stroke-width="4"/>
+                        <g transform="translate(43 -2)">${hub(0, 4)}</g>
+                        <circle cx="30" cy="84" r="9" fill="#111827"/><circle cx="140" cy="84" r="9" fill="#111827"/>
+                    </g>`;
+            } else if (k === 'fan') {
+                s += `<rect x="0" y="250" width="600" height="50" fill="#e2e8f0"/>${hub(150, 196)}
+                    <rect x="282" y="120" width="36" height="130" rx="4" fill="#84cc16"/><rect x="270" y="190" width="60" height="40" rx="6" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>
+                    <g transform="translate(300 110) rotate(${a})">${[0, 120, 240].map(r => `<ellipse cx="0" cy="-48" rx="16" ry="46" fill="#22c55e" stroke="#15803d" stroke-width="2" transform="rotate(${r})"/>`).join('')}<circle r="12" fill="#facc15"/></g>
+                    ${code.motor.on ? `<g opacity=".55" stroke="#38bdf8" stroke-width="3" fill="none"><path d="M380 90 q20 10 0 20"/><path d="M400 100 q20 10 0 20"/><path d="M380 130 q20 10 0 20"/></g>` : ''}`;
+            } else if (k === 'satellite') {
+                s += `<rect width="600" height="300" fill="#0f172a"/>${Array.from({ length: 30 }, (_, i) => `<circle cx="${(i * 97) % 600}" cy="${(i * 53) % 220}" r="1.5" fill="#fff"/>`).join('')}
+                    <rect x="0" y="250" width="600" height="50" fill="#334155"/>${hub(120, 196)}
+                    <rect x="285" y="150" width="30" height="100" fill="#94a3b8"/>
+                    <g transform="translate(300 140) rotate(${a})"><path d="M-60 0 A60 30 0 0 0 60 0 Z" fill="#e2e8f0" stroke="#64748b" stroke-width="3"/><line x1="0" y1="0" x2="0" y2="-40" stroke="#64748b" stroke-width="4"/><circle cx="0" cy="-42" r="6" fill="#ef4444"/></g>`;
+            } else if (k === 'spy') {
+                const alert = code.light && code.light !== 0;
+                s += `<rect x="0" y="250" width="600" height="50" fill="#e2e8f0"/>
+                    <g transform="translate(230 110)"><rect width="140" height="140" rx="14" fill="#64748b"/>${hub(35, 20)}
+                        <g transform="translate(40 86)"><rect width="60" height="36" rx="6" fill="#f8fafc" stroke="#9ca3af" stroke-width="2"/><circle cx="18" cy="18" r="8" fill="#111827"/><circle cx="42" cy="18" r="8" fill="#111827"/></g></g>
+                    ${code.sensorHit && code.running ? `<text x="420" y="160" font-size="64">✋</text>` : ''}
+                    ${alert ? `<circle cx="300" cy="140" r="${120 + (a % 30)}" fill="${LIGHTS[code.light]}" opacity=".12"/>` : ''}`;
+            } else if (k === 'speed') {
+                const car = (x, y, col, me) => `<g transform="translate(${x} ${y})"><rect x="0" y="0" width="90" height="30" rx="8" fill="${col}"/><rect x="18" y="-16" width="44" height="18" rx="5" fill="${me ? '#f8fafc' : '#cbd5e1'}"/>
+                    ${me ? `<rect x="30" y="-12" width="14" height="8" rx="2" fill="${LIGHTS[code.light]}"/>` : ''}<g transform="translate(20 32) rotate(${a})"><circle r="11" fill="#111827"/><rect x="-2" y="-9" width="4" height="18" fill="#f1f5f9"/></g><g transform="translate(70 32) rotate(${a})"><circle r="11" fill="#111827"/><rect x="-2" y="-9" width="4" height="18" fill="#f1f5f9"/></g></g>`;
+                s += `<rect width="600" height="300" fill="#cbd5e1"/><rect x="0" y="70" width="600" height="80" fill="#475569"/><rect x="0" y="170" width="600" height="80" fill="#475569"/>
+                    ${Array.from({ length: 10 }, (_, i) => `<rect x="${530}" y="${70 + i * 18}" width="10" height="9" fill="${i % 2 ? '#fff' : '#111827'}"/><rect x="540" y="${79 + i * 18}" width="10" height="9" fill="${i % 2 ? '#fff' : '#111827'}"/>`).join('')}
+                    <text x="10" y="64" font-family="Fredoka" font-weight="700" fill="#334155">Senin araban</text><text x="10" y="166" font-family="Fredoka" font-weight="700" fill="#334155">Rakip (güç 5)</text>
+                    ${car(code.x - 45, 95, '#0ea5e9', true)}${car(code.rival - 45, 195, '#f97316', false)}`;
+            }
+            $('stage').innerHTML = s;
+        }
+
+        let last = performance.now();
+        function loop(now) {
+            const dt = Math.min(0.05, (now - last) / 1000); last = now;
+            const m = code.motor, spd = m.on ? m.power / 10 : 0;
+            code.angle = (code.angle + m.dir * spd * 720 * dt + 3600) % 360;
+            if (code.proj === 'snail' && m.on) { code.x += m.dir * spd * 60 * dt; if (code.x > 600) code.x = -180; if (code.x < -180) code.x = 600; }
+            if (code.proj === 'speed' && code.raceOn && !code.finished) {
+                if (m.on) code.x = Math.max(60, code.x + m.dir * spd * 160 * dt);
+                code.rival += 0.5 * 160 * dt;
+                if (code.x >= 530 || code.rival >= 530) {
+                    code.finished = true; m.on = false;
+                    const win = code.x >= 530 && code.x >= code.rival;
+                    $('runMsg').textContent = win ? '🏁 Kazandın! Arabanın gücü yetti.' : '🏁 Rakip kazandı. Motor gücünü artırmayı dene!';
+                    win ? (good(), safeConfetti()) : bad();
+                    stopProgram(true);
+                }
+            }
+            if (!$('sec-code').classList.contains('hidden')) drawStage();
+            requestAnimationFrame(loop);
+        }
+        function safeConfetti() { try { if (typeof confetti === 'function') confetti({ particleCount: 80, spread: 70, origin: { y: 0.6 } }); } catch (e) {} }
+
+        /* ───────── BAŞLANGIÇ ───────── */
+        window.onload = () => {
+            renderIntro(); renderTray(); renderRules(); nextPart(); renderPalette();
+            const mode = START_MODE.startsWith('__') ? 'intro' : START_MODE;
+            selectProject(PROJECTS[mode] ? mode : 'snail');
+            if (PROJECTS[mode]) { intro.proj = mode; switchTab('code'); }
+            else switchTab(mode === 'parts' ? 'parts' : 'intro');
+            requestAnimationFrame(loop);
+        };
+    </script>
+</body>
+</html>
